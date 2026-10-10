@@ -1,6 +1,6 @@
 {
   "name": "jev-starter",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Starter for small web apps that make decisions with Jev (TypeSafe) through OpenRouter.",
   "license": "MIT",
