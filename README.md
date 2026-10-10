@@ -1,72 +1,101 @@
 # Jev Starter
 
-Gotowy szkielet małej aplikacji webowej, która podejmuje decyzje modelem **Jev** (TypeSafe) przez **OpenRouter**.
-Opisujesz w kilku zdaniach, czego potrzebujesz, a Claude Code albo Codex budują to na tym starterze. Jednym poleceniem wdrażasz aplikację na swój VPS w Hostingerze.
+A ready-made skeleton for small web apps that make decisions with **Jev** through **OpenRouter**.
+Describe what you need in a few sentences, let Claude Code or Codex build it on top of this starter, and deploy it to your own VPS with one more prompt.
 
-Jev nie pisze tekstów. Odpowiada na pytania o tekst: wybiera opcję z listy, ocenia na skali albo podaje szansę na „tak”. Robi to w ok. pół sekundy i za ok. 0,00002 USD za zapytanie.
+Built for a video on the Detechtive YouTube channel (Polish): https://www.youtube.com/@detechtiveinfo
+Po polsku: [README.pl.md](README.pl.md)
 
-## Czego potrzebujesz
+## What Jev is
 
-- [Node.js](https://nodejs.org) 22.12 lub nowszy,
-- konto na [OpenRouter](https://openrouter.ai) z kredytami i kluczem API,
-- Claude Code albo Codex,
-- do wdrożenia: VPS w Hostingerze (plan KVM 2).
+Jev is TypeSafe's decision model. It does not write text; it answers questions about text: **Choice** picks one option from your list, **Score** rates on a scale you define, and **Noul** gives the probability of “yes”.
+Answers come back in about half a second and cost about 0.00002 USD per request, so you can put a decision behind every click.
 
-## Start w 3 krokach
+## Why OpenRouter
 
-**1. Klucz.** Utwórz klucz na https://openrouter.ai/settings/keys i ustaw na nim limit kredytów (np. 5 USD). Potem:
+One account and one key for Jev (and any other model you may add later), pay-as-you-go credits, and a credit limit per key. The starter calls Jev as `jev-1.13` through OpenRouter, so there is nothing else to sign up for.
+
+## Requirements
+
+- [Node.js](https://nodejs.org) 22.12 or newer,
+- an [OpenRouter](https://openrouter.ai) account with credits and an API key,
+- Claude Code or Codex (any coding agent that reads `AGENTS.md` works),
+- for deployment: a VPS with Ubuntu or Debian and root SSH access (tested on Hostinger VPS KVM 2).
+
+## Quick start
+
+**1. Key.** Create a key at https://openrouter.ai/settings/keys and set a credit limit on it (e.g. 5 USD). Then:
 
 ```bash
 cp .env.example .env
 ```
 
-Otwórz `.env` i wklej klucz po `OPENROUTER_API_KEY=`. Ten plik nie trafia do gita.
+Open `.env` and paste the key after `OPENROUTER_API_KEY=`. This file never goes into git.
 
-**2. Uruchomienie.**
+**2. Run.**
 
 ```bash
 npm install
 npm run dev
 ```
 
-Otwórz http://localhost:5173. Zobaczysz demo: Jev czyta wiadomość od klienta i w jednym zapytaniu mówi, czego dotyczy, jak jest pilna i czy nadawca jest zirytowany. Przy wyniku widać czas i koszt zapytania.
+Open http://localhost:5173. The demo reads a message from a client and, in one Jev request, tells you what it is about, how urgent it is and whether the sender is annoyed. Every result shows the time and cost of the request.
 
-**3. Twoja aplikacja.** Otwórz folder w Claude Code albo Codex i opisz, co ma powstać, w 4–5 zdaniach. Na przykład:
+## Build your own app with an agent
 
-> Zbuduj na tym starterze aplikację do sortowania zgłoszeń z formularza mojej szkoły językowej.
-> Wklejam treść zgłoszenia, a Jev ocenia, jakiego kursu dotyczy (angielski, niemiecki, hiszpański, inny), czy chodzi o dziecko czy dorosłego i jak bardzo osoba jest zdecydowana na zapis.
-> Wynik pokaż w trzech kartach, a pod nimi podpowiedź, co odpisać.
-> Interfejs po polsku, prosty, z dużymi literami.
+Open the folder in Claude Code or Codex and describe the app in 4–5 sentences. For example:
 
-Agent wie, jak pracować z tym projektem, bo czyta [AGENTS.md](AGENTS.md).
+> Build an app on this starter that sorts sign-up requests for my language school.
+> I paste a request, and Jev decides which course it is about (English, German, Spanish, other), whether it is for a child or an adult, and how ready the person is to sign up.
+> Show the result in three cards with a suggested reply below them.
+> Simple interface with large type.
 
-## Wdrożenie
+The agent knows how to work with this project because it reads [AGENTS.md](AGENTS.md): it adds a recipe (the questions for Jev) on the server, builds the page and runs the checks.
 
-W tym samym oknie agenta napisz:
+## Project structure
 
-> Wdróż tę aplikację na mój VPS w Hostingerze.
+```
+server/            Express + TypeScript API
+  jev.ts           Jev client: typed questions and answers, retries, askMany
+  recipes/         recipes = the questions for Jev, one decision each (demo.ts is the example)
+  context.ts       budget-checked access to Jev for recipes
+  routes.ts        POST /api/recipes/<name>
+  app.ts           body limit, per-IP rate limit, /api/health, /api/stats, static files
+  budget.ts        daily spending limit
+src/               React page (Vite), CostBadge, callRecipe()
+test/              vitest tests (no network)
+deploy/            shared Caddy for the VPS + deploy notes
+Dockerfile, docker-compose.yml
+AGENTS.md          the guide for coding agents
+```
 
-Agent znajdzie serwer (przez konektor Hostinger albo zapyta o IP), sprawdzi, co już na nim działa, skonfiguruje Dockera i Caddy, a na koniec poda adres z HTTPS. Niczego, co już działa na serwerze, nie wyłącza ani nie zmienia. Jeśli masz domenę lub subdomenę, podaj ją: agent doda tylko nowy rekord. Bez domeny dostaniesz darmowy adres w sslip.io.
-Szczegóły dla ciekawych: [deploy/README.md](deploy/README.md).
+## Safety
 
-## Koszty i bezpieczeństwo
+- The OpenRouter key stays on the server, in `.env`. The browser never sees it.
+- The questions for Jev live on the server. The browser only sends input data, so nobody can use your key as a free Jev proxy.
+- Set a credit limit on the key in OpenRouter.
+- The app has a daily spending limit (`DAILY_BUDGET_USD`, default 1 USD) and a per-IP rate limit (`RATE_LIMIT_PER_MINUTE`).
+- In production, visitors see short error messages; details stay in the server log.
 
-- Klucz zostaje na serwerze. Przeglądarka wysyła tylko dane, a pytania do Jev są zapisane w kodzie serwera.
-- Dzienny limit wydatków (`DAILY_BUDGET_USD`, domyślnie 1 USD) i limit zapytań na adres IP (`RATE_LIMIT_PER_MINUTE`) ustawiasz w `.env`.
-- Ustaw też limit kredytów na samym kluczu w OpenRouterze.
+## Deploy
 
-## Polecenia
+In the same agent window write:
 
-| Polecenie | Co robi |
+> Deploy this app to my VPS.
+
+The agent finds the server (through the Hostinger connector, if you use Hostinger and have it connected, or by asking for the IP), checks what already runs there, sets up Docker and Caddy, and gives you an HTTPS address. It never stops or changes services that already run on the server. If you have a domain or subdomain, mention it: the agent only adds a new DNS record. Without a domain you get a free `sslip.io` address.
+Manual steps and details: [deploy/README.md](deploy/README.md).
+
+## Commands
+
+| Command | What it does |
 |---|---|
-| `npm run dev` | uruchamia aplikację do pracy (strona na http://localhost:5173) |
-| `npm test` | uruchamia testy |
-| `npm run build` | buduje wersję produkcyjną |
-| `npm start` | uruchamia wersję produkcyjną na http://localhost:3000 |
+| `npm run dev` | development mode (page at http://localhost:5173) |
+| `npm test` | runs the tests |
+| `npm run typecheck` | checks types |
+| `npm run build` | builds the production version |
+| `npm start` | runs the production version at http://localhost:3000 |
 
-## Co jest w środku
+## License
 
-- `server/`: Express i TypeScript, klient Jev, przepisy (pytania do Jev), budżet i limity,
-- `src/`: strona w React (Vite),
-- `test/`: testy,
-- `Dockerfile`, `docker-compose.yml`, `deploy/`: wdrożenie na VPS.
+[MIT](LICENSE)
