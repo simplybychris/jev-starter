@@ -2,7 +2,12 @@
   "name": "jev-starter",
   "version": "0.0.0",
   "private": true,
-  "description": "Starter do małych aplikacji webowych na modelu Jev (TypeSafe) przez OpenRouter.",
+  "description": "Starter for small web apps that make decisions with Jev (TypeSafe) through OpenRouter.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/simplybychris/jev-starter.git"
+  },
   "type": "module",
   "engines": {
     "node": ">=22.12"
