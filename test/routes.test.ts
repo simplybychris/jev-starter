@@ -107,6 +107,16 @@ describe("POST /api/recipes/:name", () => {
     expect(budget.snapshot().requests).toBe(1);
   });
 
+  it("passes on an estimated cost", async () => {
+    const askJev = vi
+      .fn<AskJev>()
+      .mockResolvedValue({ ...JEV_RESULT, usage: { ...JEV_RESULT.usage, cost: 0.00002, costEstimated: true } });
+    await withServer(setup({ askJev }).app, async (base) => {
+      const body = (await (await post(base, "/api/recipes/check", { text: "x" })).json()) as { costEstimated: boolean };
+      expect(body.costEstimated).toBe(true);
+    });
+  });
+
   it("rejects invalid input with 400 and a Polish message, without calling Jev", async () => {
     const { app, askJev } = setup();
     await withServer(app, async (base) => {

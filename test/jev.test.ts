@@ -199,3 +199,46 @@ describe("askMany", () => {
     expect(started).toBeLessThan(30);
   });
 });
+
+describe("retries and cost", () => {
+  it("retries a 5xx once and returns the second answer", async () => {
+    const fetch = mockFetch(jsonResponse(503, "busy"), jsonResponse(200, OK_BODY));
+    const sleep = vi.fn(async () => undefined);
+    const result = await createAskJev({ apiKey: API_KEY, fetch, sleep, retryDelayMs: 700 })({ state: "x", questions });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(sleep).toHaveBeenCalledWith(700);
+    expect(result.answers.urgent).toEqual({ type: "noul", noul: 0.95 });
+  });
+
+  it("honours Retry-After, capped", async () => {
+    const limited = (seconds: string) =>
+      new Response("slow down", { status: 429, headers: { "retry-after": seconds } });
+
+    const sleep = vi.fn(async () => undefined);
+    const fetchShort = mockFetch(limited("1"), jsonResponse(200, OK_BODY));
+    await createAskJev({ apiKey: API_KEY, fetch: fetchShort, sleep, maxRetryDelayMs: 3000 })({ state: "x", questions });
+    expect(sleep).toHaveBeenLastCalledWith(1000);
+
+    const fetchLong = mockFetch(limited("120"), jsonResponse(200, OK_BODY));
+    await createAskJev({ apiKey: API_KEY, fetch: fetchLong, sleep, maxRetryDelayMs: 3000 })({ state: "x", questions });
+    expect(sleep).toHaveBeenLastCalledWith(3000);
+  });
+
+  it("does not retry a timeout", async () => {
+    const timeout = Object.assign(new Error("timed out"), { name: "TimeoutError" });
+    const fetch = mockFetch(timeout, jsonResponse(200, OK_BODY));
+    const error = await createAskJev({ apiKey: API_KEY, fetch, retryDelayMs: 0 })({ state: "x", questions }).catch((e) => e);
+    expect(error).toBeInstanceOf(JevError);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("estimates the cost from input tokens when OpenRouter does not report it", async () => {
+    const body = { ...OK_BODY, usage: { input_tokens: 1_000_000, output_tokens: 10 } };
+    const result = await createAskJev({ apiKey: API_KEY, fetch: mockFetch(jsonResponse(200, body)) })({ state: "x", questions });
+    expect(result.usage.cost).toBeCloseTo(0.042, 10);
+    expect(result.usage.costEstimated).toBe(true);
+
+    const reported = await createAskJev({ apiKey: API_KEY, fetch: mockFetch(jsonResponse(200, OK_BODY)) })({ state: "x", questions });
+    expect(reported.usage.costEstimated).toBeUndefined();
+  });
+});

@@ -138,12 +138,30 @@ export interface JevClientOptions {
   model?: string;
   url?: string;
   timeoutMs?: number;
+  /** Wait before the single retry when the server sends no Retry-After header. */
   retryDelayMs?: number;
+  /** Upper bound for a Retry-After wait. */
+  maxRetryDelayMs?: number;
   fetch?: typeof fetch;
+  /** Injectable for tests. */
+  sleep?: (ms: number) => Promise<void>;
 }
 
+/** Fallback when OpenRouter does not report usage.cost: about 0.042 USD per 1M input tokens. */
+export const ESTIMATED_USD_PER_INPUT_TOKEN = 0.042 / 1_000_000;
+
 const shouldRetry = (status: number) => status === 429 || status >= 500;
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/** Delay before the retry: Retry-After (seconds or HTTP date) capped at maxMs, otherwise the fallback. */
+export function retryDelay(response: Response, fallbackMs: number, maxMs: number): number {
+  const header = response.headers.get("retry-after")?.trim();
+  if (!header) return fallbackMs;
+  const seconds = Number(header);
+  const ms = Number.isFinite(seconds) ? seconds * 1000 : Date.parse(header) - Date.now();
+  if (!Number.isFinite(ms) || ms < 0) return fallbackMs;
+  return Math.min(ms, maxMs);
+}
 
 function redact(text: string, apiKey: string): string {
   let clean = text.replace(/sk-or-[A-Za-z0-9_-]+/g, "[ukryty klucz]");
@@ -193,8 +211,10 @@ export function createAskJev(options: JevClientOptions): AskJev {
     url = JEV_URL,
     timeoutMs = 15_000,
     retryDelayMs = 800,
+    maxRetryDelayMs = 5_000,
   } = options;
   const doFetch = options.fetch ?? globalThis.fetch;
+  const sleep = options.sleep ?? defaultSleep;
 
   async function send(body: string): Promise<Response> {
     try {
@@ -239,8 +259,9 @@ export function createAskJev(options: JevClientOptions): AskJev {
     const started = performance.now();
     let response = await send(body);
     if (shouldRetry(response.status)) {
+      const delay = retryDelay(response, retryDelayMs, maxRetryDelayMs);
       await response.body?.cancel().catch(() => undefined);
-      await sleep(retryDelayMs);
+      await sleep(delay);
       response = await send(body);
     }
     const payload = await readPayload(response);
@@ -252,12 +273,17 @@ export function createAskJev(options: JevClientOptions): AskJev {
       throw new JevError(`Nieoczekiwana odpowiedź Jev.${details ? ` Szczegóły: ${details}` : ""}`, 502);
     }
 
+    const inputTokens = toNumber(data.usage?.input_tokens);
+    const reportedCost = data.usage?.cost;
+    const hasCost = typeof reportedCost === "number" && Number.isFinite(reportedCost);
+
     return {
       answers: data.answers as JevAnswers,
       usage: {
-        input_tokens: toNumber(data.usage?.input_tokens),
+        input_tokens: inputTokens,
         output_tokens: toNumber(data.usage?.output_tokens),
-        cost: toNumber(data.usage?.cost),
+        cost: hasCost ? reportedCost : inputTokens * ESTIMATED_USD_PER_INPUT_TOKEN,
+        ...(hasCost ? {} : { costEstimated: true }),
       },
       ms: Math.round(performance.now() - started),
       model: typeof data.model === "string" ? data.model : model,
