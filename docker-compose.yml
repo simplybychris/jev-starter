@@ -11,7 +11,7 @@ services:
     environment:
       PORT: "3000"
       # Midnight in this zone resets the daily budget counter.
-      TZ: ${TZ:-Europe/Warsaw}
+      TZ: ${TZ:-UTC}
     restart: unless-stopped
     labels:
       # Marks resources created by this starter, so a deploy never touches anything else.

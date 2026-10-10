@@ -13,18 +13,18 @@
 	}
 }
 
-# Example without your own domain (APP_NAME=moja-aplikacja, VPS IP 203.0.113.10):
+# Example without your own domain (APP_NAME=my-app, VPS IP 203.0.113.10):
 #
-# moja-aplikacja.203-0-113-10.sslip.io {
+# my-app.203-0-113-10.sslip.io {
 # 	import security_headers
 # 	encode
-# 	reverse_proxy moja-aplikacja:3000
+# 	reverse_proxy my-app:3000
 # }
 #
 # Example with your own subdomain (A record -> VPS IP):
 #
-# app.twojadomena.pl {
+# app.example.com {
 # 	import security_headers
 # 	encode
-# 	reverse_proxy moja-aplikacja:3000
+# 	reverse_proxy my-app:3000
 # }
