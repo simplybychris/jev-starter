@@ -52,6 +52,7 @@ function setup(overrides: Partial<AppOptions> = {}) {
     model: "jev-1.13",
     rateLimitPerMinute: 100,
     bodyLimit: "1kb",
+    exposeErrorDetails: false,
     staticDir: null,
     ...overrides,
   });
@@ -167,13 +168,24 @@ describe("POST /api/recipes/:name", () => {
     expect(askJev).not.toHaveBeenCalled();
   });
 
-  it("maps Jev errors to 502 and other errors to 500", async () => {
-    const failing = vi.fn<AskJev>().mockRejectedValue(new JevError("OpenRouter odrzucił klucz API (401).", 401));
+  it("maps Jev errors to 502 with a public message, details only in development", async () => {
+    const failing = vi
+      .fn<AskJev>()
+      .mockRejectedValue(new JevError("OpenRouter odrzucił klucz API (401). Sprawdź OPENROUTER_API_KEY w .env.", 401));
     await withServer(setup({ askJev: failing }).app, async (base) => {
       const response = await post(base, "/api/recipes/check", { text: "Dzień dobry" });
       expect(response.status).toBe(502);
-      expect(await errorOf(response)).toMatch(/odrzucił klucz/);
+      const error = await errorOf(response);
+      expect(error).toMatch(/konfiguracją/);
+      expect(error).not.toMatch(/OPENROUTER_API_KEY|\.env|401/);
     });
+    await withServer(setup({ askJev: failing, exposeErrorDetails: true }).app, async (base) => {
+      const response = await post(base, "/api/recipes/check", { text: "Dzień dobry" });
+      expect(await errorOf(response)).toMatch(/OPENROUTER_API_KEY/);
+    });
+  });
+
+  it("maps other errors to 500 without details", async () => {
 
     const broken = vi.fn<AskJev>().mockRejectedValue(new Error("boom"));
     await withServer(setup({ askJev: broken }).app, async (base) => {

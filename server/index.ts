@@ -28,6 +28,7 @@ const app = createApp({
   model: config.jevModel,
   rateLimitPerMinute: config.rateLimitPerMinute,
   bodyLimit: config.bodyLimit,
+  exposeErrorDetails: devMode,
   staticDir: devMode ? null : join(PROJECT_ROOT, "dist"),
 });
 

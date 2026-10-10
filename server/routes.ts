@@ -12,6 +12,8 @@ export interface RecipeRouterDeps {
   recipes: RecipeRegistry;
   askJev: AskJev;
   budget: DailyBudget;
+  /** true only in local development: show upstream details instead of the short public message. */
+  exposeErrorDetails: boolean;
 }
 
 function formatIssues(error: z.ZodError) {
@@ -24,7 +26,7 @@ function formatIssues(error: z.ZodError) {
  * POST /recipes/:name with the recipe input as JSON body.
  * Flow: validate -> Jev through the budgeted context -> interpret -> { result, ms, cost, costEstimated, calls }.
  */
-export function createRecipeRouter({ recipes, askJev, budget }: RecipeRouterDeps): Router {
+export function createRecipeRouter({ recipes, askJev, budget, exposeErrorDetails }: RecipeRouterDeps): Router {
   const router = Router();
 
   router.post("/recipes/:name", async (req, res) => {
@@ -58,11 +60,11 @@ export function createRecipeRouter({ recipes, askJev, budget }: RecipeRouterDeps
       }
       if (error instanceof JevError) {
         console.warn(`[jev] ${name}: ${error.status} ${error.message}`);
-        res.status(502).json({ error: error.message });
+        res.status(502).json({ error: exposeErrorDetails ? error.message : error.publicMessage });
         return;
       }
       console.error(`[recipe] ${name}:`, error);
-      res.status(500).json({ error: "Wewnętrzny błąd serwera. Szczegóły są w logach serwera." });
+      res.status(500).json({ error: "Wewnętrzny błąd serwera. Spróbuj ponownie później." });
     }
   });
 

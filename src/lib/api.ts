@@ -11,6 +11,9 @@ export interface RecipeResponse<TResult> {
   calls: number;
 }
 
+// Setup hints only while developing locally; visitors of a deployed app never see them.
+const DEV_HINT = import.meta.env.DEV ? " Sprawdź, czy działa npm run dev." : "";
+
 export class ApiError extends Error {
   override name = "ApiError";
   constructor(
@@ -40,7 +43,7 @@ export async function callRecipe<TInput, TResult>(
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") throw error;
-    throw new ApiError("Brak połączenia z serwerem. Sprawdź, czy aplikacja działa (npm run dev).", 0);
+    throw new ApiError(`Brak połączenia z serwerem.${DEV_HINT}`, 0);
   }
 
   const body = (await response.json().catch(() => null)) as
@@ -48,9 +51,7 @@ export async function callRecipe<TInput, TResult>(
     | null;
 
   if (!response.ok) {
-    const message =
-      body?.error ??
-      `Serwer API nie odpowiada poprawnie (błąd ${response.status}). Sprawdź, czy aplikacja działa (npm run dev).`;
+    const message = body?.error ?? `Serwer nie odpowiada poprawnie (błąd ${response.status}).${DEV_HINT}`;
     throw new ApiError(message, response.status);
   }
   if (!body || body.result === undefined) {

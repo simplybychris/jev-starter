@@ -104,14 +104,26 @@ export interface JevResult {
 
 export type AskJev = (request: JevRequest) => Promise<JevResult>;
 
+/** Short message that is safe to show to any visitor (no setup hints, no upstream details). */
+export function publicMessageFor(status: number): string {
+  if (status === 400) return "Aplikacja ma chwilowy problem z zapytaniem do Jev. Spróbuj ponownie później.";
+  if ([401, 402, 403, 404].includes(status)) {
+    return "Aplikacja ma problem z konfiguracją po stronie serwera. Spróbuj ponownie później.";
+  }
+  return "Jev jest chwilowo niedostępny. Spróbuj ponownie za chwilę.";
+}
+
 export class JevError extends Error {
   override name = "JevError";
+  /** Safe for visitors; `message` has the details for logs and local development. */
+  readonly publicMessage: string;
   constructor(
     message: string,
     /** Upstream HTTP status, or 502/504 for connection problems and timeouts. */
     readonly status: number,
   ) {
     super(message);
+    this.publicMessage = publicMessageFor(status);
   }
 }
 

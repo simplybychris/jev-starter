@@ -15,6 +15,8 @@ export interface AppOptions {
   rateLimitPerMinute: number;
   /** Max JSON body size accepted by /api, e.g. "100kb". */
   bodyLimit: string;
+  /** true only in local development: errors show upstream details. Production shows short public messages. */
+  exposeErrorDetails: boolean;
   /** Folder with the built frontend (dist/). null = API only (dev mode, tests). */
   staticDir: string | null;
 }
@@ -30,7 +32,7 @@ const apiErrorHandler = (bodyLimit: string): ErrorRequestHandler => (error, _req
     return;
   }
   console.error("[api]", error);
-  res.status(500).json({ error: "Wewnętrzny błąd serwera. Szczegóły są w logach serwera." });
+  res.status(500).json({ error: "Wewnętrzny błąd serwera. Spróbuj ponownie później." });
 };
 
 export function createApp(options: AppOptions): Express {
@@ -80,8 +82,9 @@ export function createApp(options: AppOptions): Express {
       res.sendFile(join(staticDir, "index.html"));
     });
   } else {
+    if (staticDir) console.warn(`[app] ${join(staticDir, "index.html")} not found. Run npm run build first.`);
     const hint = staticDir
-      ? "Brak zbudowanej strony w folderze dist/. Uruchom najpierw npm run build."
+      ? "Strona jest chwilowo niedostępna."
       : "To jest serwer API. Stronę otwórz pod adresem z Vite (zwykle http://localhost:5173).";
     app.get("/", (_req, res) => {
       res.type("text/plain; charset=utf-8").send(hint);
