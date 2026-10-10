@@ -15,4 +15,21 @@ Wszystkie istotne zmiany w projekcie. Format: [Keep a Changelog](https://keepach
 - Dockerfile, `docker-compose.yml` i wspólny Caddy (`deploy/caddy/`) do wdrożenia na Hostinger VPS KVM 2.
 - AGENTS.md (przewodnik dla agenta ze ściągą Jev i procedurą wdrożenia), CLAUDE.md, README.md, MAINTAINING.md.
 
-— Task 1 starter core · 2026-10-10 · impl: Claude Opus 5.5 · review: pending · a635a4a..c2aeb50
+— Task 1 starter core · 2026-10-10 · impl: Claude Opus 5.5 · review: Claude Opus 5.5 · a635a4a..c2aeb50
+
+### Changed
+
+- Przepisy mogą robić kilka zapytań do Jev: `run(input, ctx)` z `ctx.ask()` i `ctx.askMany()` (najwyżej 8 równolegle). Każde zapytanie sprawdza budżet i zapisuje koszt, a odpowiedź API ma `calls`, sumę `cost` i `costEstimated`.
+- `build()` przepisu może zwracać `state` jako obiekt.
+- Limit rozmiaru zapytania ustawiany przez `BODY_LIMIT` (domyślnie 100 kB), strefa czasowa dziennego budżetu przez `TZ`.
+- Na produkcji błędy Jev mają krótki komunikat dla odwiedzających, szczegóły trafiają tylko do logów serwera.
+- Zasoby wdrożenia mają etykietę `jev-starter=1`, Caddy dodaje nagłówki bezpieczeństwa, `react` jest tylko zależnością deweloperską.
+- AGENTS.md: rozpoznanie serwera przed wdrożeniem i zasady nienaruszania działających usług i rekordów DNS, wiele elementów w jednym zapytaniu, bezpieczniejsze `rsync` (`--dry-run`, `${NAZWA:?}`), wariant dla Windows, poprawiony wzór Web Speech API.
+
+### Fixed
+
+- Brak `usage.cost` w odpowiedzi: koszt jest szacowany z tokenów wejścia i oznaczany jako szacunkowy.
+- Ponowienie przy 429 i 5xx respektuje nagłówek `Retry-After` (z górnym limitem).
+- `.env.*` w `.gitignore`, `.claude/` i `.codex/` wykluczone z obrazu i z kopiowania na serwer.
+
+— Task 1 review fixes · 2026-10-10 · impl: Claude Opus 5.5 · review: Claude Opus 5.5 · cfbfa30..d223f8d
