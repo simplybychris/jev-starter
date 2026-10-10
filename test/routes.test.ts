@@ -6,18 +6,27 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp, type AppOptions } from "../server/app.js";
 import { DailyBudget } from "../server/budget.js";
-import { JevError, type AskJev, type JevResult } from "../server/jev.js";
-import { recipes } from "../server/recipes/index.js";
+import { z } from "zod";
+import { JevError, noul, readNoul, type AskJev, type JevResult } from "../server/jev.js";
+import { defineRecipe, registerRecipes } from "../server/recipes/recipe.js";
+
+// A test-only recipe keeps these tests independent from the demo recipe.
+const check = defineRecipe({
+  name: "check",
+  input: z.object({
+    text: z.string({ error: "Wpisz treść." }).trim().min(1, "Wpisz treść.").max(50, "Najwyżej 50 znaków."),
+    count: z.number().int().max(5).optional(),
+  }),
+  build: ({ text }) => ({ state: text, questions: { polite: noul("Is the message polite?") } }),
+  interpret: (answers) => ({ polite: readNoul(answers, "polite").noul >= 0.5 }),
+});
+const recipes = registerRecipes([check]);
 
 const JEV_RESULT: JevResult = {
   model: "typesafe/jev-1.13-20260917",
   ms: 312,
   usage: { input_tokens: 480, output_tokens: 77, cost: 0.000021 },
-  answers: {
-    topic: { type: "choice", choice: "complaint", probabilities: { complaint: 0.97 }, confidence: 0.97 },
-    urgency: { type: "score", score: 3.2, legend: {}, probabilities: {}, confidence: 0.8 },
-    annoyed: { type: "noul", noul: 0.9 },
-  },
+  answers: { polite: { type: "noul", noul: 0.9 } },
 };
 
 function setup(overrides: Partial<AppOptions> = {}) {
@@ -69,35 +78,38 @@ describe("POST /api/recipes/:name", () => {
   it("returns the interpreted result with time and cost", async () => {
     const { app, askJev, budget } = setup();
     await withServer(app, async (base) => {
-      const response = await post(base, "/api/recipes/demo", { text: "Faktura jest błędna, proszę o korektę." });
+      const response = await post(base, "/api/recipes/check", { text: "  Dzień dobry!  " });
       expect(response.status).toBe(200);
-      expect(await response.json()).toEqual({
-        result: { topic: "complaint", topicConfidence: 0.97, urgency: 4, annoyed: true, annoyedP: 0.9 },
-        ms: 312,
-        cost: 0.000021,
-      });
+      expect(await response.json()).toEqual({ result: { polite: true }, ms: 312, cost: 0.000021 });
     });
     expect(askJev).toHaveBeenCalledTimes(1);
-    expect(askJev.mock.calls[0]![0].state).toContain("Faktura jest błędna");
+    expect(askJev.mock.calls[0]![0].state).toBe("Dzień dobry!");
     expect(budget.snapshot().requests).toBe(1);
   });
 
   it("rejects invalid input with 400 and a Polish message, without calling Jev", async () => {
     const { app, askJev } = setup();
     await withServer(app, async (base) => {
-      const missing = await post(base, "/api/recipes/demo", {});
+      const missing = await post(base, "/api/recipes/check", {});
       expect(missing.status).toBe(400);
-      expect(await errorOf(missing)).toBe("Wpisz treść wiadomości.");
+      expect(await errorOf(missing)).toBe("Wpisz treść.");
 
-      const tooLong = await post(base, "/api/recipes/demo", { text: "a".repeat(2001) });
+      const tooLong = await post(base, "/api/recipes/check", { text: "a".repeat(51) });
       expect(tooLong.status).toBe(400);
-      expect(await errorOf(tooLong)).toMatch(/2000 znaków/);
+      expect(await errorOf(tooLong)).toBe("Najwyżej 50 znaków.");
 
-      const badJson = await post(base, "/api/recipes/demo", "{text:");
+      // Schemas without custom messages still answer in Polish (zod locale).
+      const generic = await post(base, "/api/recipes/check", { text: "x", count: 10 });
+      expect(generic.status).toBe(400);
+      const genericError = await errorOf(generic);
+      expect(genericError).not.toBe("");
+      expect(genericError).not.toMatch(/Too big|expected/i);
+
+      const badJson = await post(base, "/api/recipes/check", "{text:");
       expect(badJson.status).toBe(400);
       expect(await errorOf(badJson)).toMatch(/JSON/);
 
-      const huge = await post(base, "/api/recipes/demo", { text: "a".repeat(30_000) });
+      const huge = await post(base, "/api/recipes/check", { text: "a".repeat(30_000) });
       expect(huge.status).toBe(413);
     });
     expect(askJev).not.toHaveBeenCalled();
@@ -117,7 +129,7 @@ describe("POST /api/recipes/:name", () => {
     budget.record({ input_tokens: 1, output_tokens: 1, cost: 0.00002 });
     const { app, askJev } = setup({ budget });
     await withServer(app, async (base) => {
-      const response = await post(base, "/api/recipes/demo", { text: "Dzień dobry" });
+      const response = await post(base, "/api/recipes/check", { text: "Dzień dobry" });
       expect(response.status).toBe(402);
       expect(await errorOf(response)).toMatch(/Dzienny limit/);
     });
@@ -127,14 +139,14 @@ describe("POST /api/recipes/:name", () => {
   it("maps Jev errors to 502 and other errors to 500", async () => {
     const failing = vi.fn<AskJev>().mockRejectedValue(new JevError("OpenRouter odrzucił klucz API (401).", 401));
     await withServer(setup({ askJev: failing }).app, async (base) => {
-      const response = await post(base, "/api/recipes/demo", { text: "Dzień dobry" });
+      const response = await post(base, "/api/recipes/check", { text: "Dzień dobry" });
       expect(response.status).toBe(502);
       expect(await errorOf(response)).toMatch(/odrzucił klucz/);
     });
 
     const broken = vi.fn<AskJev>().mockRejectedValue(new Error("boom"));
     await withServer(setup({ askJev: broken }).app, async (base) => {
-      const response = await post(base, "/api/recipes/demo", { text: "Dzień dobry" });
+      const response = await post(base, "/api/recipes/check", { text: "Dzień dobry" });
       expect(response.status).toBe(500);
       expect(await errorOf(response)).not.toMatch(/boom/);
     });
@@ -143,9 +155,9 @@ describe("POST /api/recipes/:name", () => {
   it("limits requests per IP with 429", async () => {
     const { app } = setup({ rateLimitPerMinute: 2 });
     await withServer(app, async (base) => {
-      expect((await post(base, "/api/recipes/demo", { text: "1" })).status).toBe(200);
-      expect((await post(base, "/api/recipes/demo", { text: "2" })).status).toBe(200);
-      const limited = await post(base, "/api/recipes/demo", { text: "3" });
+      expect((await post(base, "/api/recipes/check", { text: "1" })).status).toBe(200);
+      expect((await post(base, "/api/recipes/check", { text: "2" })).status).toBe(200);
+      const limited = await post(base, "/api/recipes/check", { text: "3" });
       expect(limited.status).toBe(429);
       expect(await errorOf(limited)).toMatch(/Za dużo zapytań/);
       expect((await fetch(`${base}/api/health`)).status).toBe(200);
