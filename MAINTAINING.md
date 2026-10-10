@@ -1,39 +1,39 @@
-# Utrzymanie projektu
+# Maintaining
 
-Zasady dla opiekuna repozytorium. Widzowie i ich agenci tego nie potrzebują, dla nich są README.md i AGENTS.md.
+Rules for the repository maintainer. Users and their agents do not need this; they have README.md and AGENTS.md.
 
-## Commity
+## Commits
 
-- [Conventional Commits](https://www.conventionalcommits.org/): `feat`, `fix`, `docs`, `build`, `chore`, `test`, `refactor`, opcjonalny zakres, np. `feat(server): ...`.
-- Krótko, po angielsku, granularnie: jeden działający moduł z zielonymi testami na commit.
-- Bez linii `Co-Authored-By`.
-- Pliki dodawaj z nazwy (`git add <ścieżki>`), nie `git add -A`. Nigdy nie commituj `.env`.
+- [Conventional Commits](https://www.conventionalcommits.org/): `feat`, `fix`, `docs`, `build`, `chore`, `test`, `refactor`, with an optional scope, e.g. `feat(server): ...`.
+- Short, in English, granular: one working module with green tests per commit.
+- No `Co-Authored-By` lines.
+- Stage files by name (`git add <paths>`), not `git add -A`. Never commit `.env`.
 
 ## CHANGELOG
 
-Format [Keep a Changelog](https://keepachangelog.com/pl/1.1.0/), wersje według [SemVer](https://semver.org/lang/pl/).
-Nowe wpisy trafiają do `[Unreleased]`. Każdy blok zmian kończy się linią metadanych:
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [SemVer](https://semver.org/).
+New entries go under `[Unreleased]`. Every block of changes ends with a metadata line:
 
 ```
-— <zadanie> · <RRRR-MM-DD> · impl: <model albo osoba> · review: <model albo osoba> · <pierwszy-hash>..<ostatni-hash>
+— <task> · <YYYY-MM-DD> · impl: <model or person> · review: <model or person> · <first-hash>..<last-hash>
 ```
 
-Wydanie: przenieś `[Unreleased]` do `[X.Y.Z] - RRRR-MM-DD`, podbij `version` w `package.json`, otaguj `vX.Y.Z`.
+Release: move `[Unreleased]` to `[X.Y.Z] - YYYY-MM-DD`, bump `version` in `package.json`, commit `chore(release): vX.Y.Z` and tag `vX.Y.Z`.
 
-## Przed wydaniem
+## Before a release
 
 1. `npm run typecheck`, `npm test`, `npm run build`.
 2. `docker build -t jev-starter-test .`
-3. Test na żywo: zbudowany serwer z prawdziwym kluczem w zmiennej środowiskowej (`OPENROUTER_API_KEY=... npm start` albo przez pęk kluczy), potem `curl -s -X POST localhost:3000/api/recipes/demo -H 'content-type: application/json' -d '{"text":"..."}'`. Klucz nie trafia do żadnego pliku.
-4. `git grep --untracked -nE "sk-or-v1-[a-f0-9]{20,}"` nic nie znajduje (w repo nie ma prawdziwego klucza).
+3. Live test: the built server with a real key in an environment variable (`OPENROUTER_API_KEY=... npm start`), then `curl -s -X POST localhost:3000/api/recipes/demo -H 'content-type: application/json' -d '{"text":"..."}'`. The key never goes into a file.
+4. `git grep --untracked -nE "sk-or-v1-[a-f0-9]{20,}"` finds nothing.
 
-## Zależności
+## Dependencies
 
-- Sprawdzaj `npm outdated`. Vitest 5 i concurrently 10 wymagają Node.js 22, stąd `engines` `>=22.12` i obraz `node:22-alpine`.
-- Nie dodawaj zależności, które da się zastąpić kilkoma linijkami kodu. Starter ma zostać mały i czytelny dla agentów.
+- Check `npm outdated`. Vitest 5 and concurrently 10 need Node.js 22, hence `engines` `>=22.12` and the `node:22-alpine` image.
+- Do not add dependencies that a few lines of code can replace. The starter should stay small and easy for agents to read.
 
-## Co zmieniać ostrożnie
+## Change with care
 
-- Kontrakt przepisu (`server/recipes/recipe.ts`), API `server/jev.ts`, `callRecipe` i `CostBadge` są opisane w AGENTS.md. Każda zmiana tutaj wymaga aktualizacji AGENTS.md.
-- Fakty o Jev w AGENTS.md (format API, limity, ceny, słabe strony) sprawdzono na żywo 02.10 i 10.10.2026. Przy nowej wersji modelu sprawdź je ponownie i zaktualizuj `JEV_MODEL` w `.env.example`.
-- Procedura wdrożenia w AGENTS.md opisuje możliwości konektora Hostinger po funkcji, bez nazw narzędzi. Niech tak zostanie.
+- The recipe contract (`server/recipes/recipe.ts`), the `server/jev.ts` API, `callRecipe` and `CostBadge` are described in AGENTS.md. Any change here needs an AGENTS.md update.
+- The Jev facts in AGENTS.md (API format, limits, prices, weak spots) were verified live on 2026-10-02 and 2026-10-10. With a new model version, verify them again and update `JEV_MODEL` in `.env.example`.
+- The deploy procedure in AGENTS.md describes the Hostinger connector by function, not by tool names. Keep it that way.
