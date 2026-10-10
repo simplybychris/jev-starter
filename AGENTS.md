@@ -1,76 +1,76 @@
-# AGENTS.md: przewodnik dla agenta
+# AGENTS.md: guide for coding agents
 
-Ten projekt to starter do małych aplikacji webowych, które podejmują decyzje modelem **Jev** (TypeSafe) przez **OpenRouter**.
-Użytkownik zwykle nie programuje. Opisuje aplikację w kilku zdaniach, a Ty ją budujesz, sprawdzasz i na prośbę wdrażasz na jego VPS.
-Pisz do niego po polsku, prosto i bez żargonu. Interfejs aplikacji też po polsku. Nazwy w kodzie i komentarze po angielsku.
+This project is a starter for small web apps that make decisions with **Jev** (TypeSafe's decision model) through **OpenRouter**.
+The user usually does not program. They describe the app in a few sentences; you build it, check it and, when asked, deploy it to their VPS.
+Talk to the user in their language, plainly and without jargon. Build the app's interface in the user's language unless they ask otherwise. Code identifiers and comments stay in English.
 
-## Co musi podać użytkownik
+## What the user has to provide
 
-1. **Klucz OpenRouter.** Tworzy się go na https://openrouter.ai/settings/keys, a konto musi mieć kredyty (https://openrouter.ai/settings/credits).
-   Poleć ustawienie limitu kredytów na kluczu (np. 5 USD). Jev kosztuje grosze, a limit chroni przed niespodzianką. Model: `jev-1.13`.
-   - Jeśli nie ma pliku `.env`, zrób `cp .env.example .env` i poproś, żeby użytkownik wkleił klucz po `OPENROUTER_API_KEY=`.
-   - Jeśli wklei klucz w czacie, zapisz go tylko w `.env`. Nigdy nie wypisuj klucza, nie wpisuj go do kodu, dokumentacji, logów ani commitów (`.env` i `.env.*` są w `.gitignore`).
-2. **Co zbudować**, zwykłymi słowami (4–5 zdań): kto będzie używał aplikacji, co do niej wkleja albo mówi, jakie decyzje ma podjąć Jev i co zrobić z wynikiem.
-3. **Do wdrożenia (opcjonalnie):** dostęp do VPS (np. Hostinger KVM 2 przez konektor Hostinger albo IP serwera) i ewentualnie domena lub subdomena.
+1. **An OpenRouter key.** Created at https://openrouter.ai/settings/keys; the account needs credits (https://openrouter.ai/settings/credits).
+   Recommend a credit limit on the key (e.g. 5 USD). Jev costs fractions of a cent, and the limit prevents surprises. Model: `jev-1.13`.
+   - If there is no `.env`, run `cp .env.example .env` and ask the user to paste the key after `OPENROUTER_API_KEY=`.
+   - If they paste the key into the chat, write it only to `.env`. Never print the key and never put it into code, docs, logs or commits (`.env` and `.env.*` are in `.gitignore`).
+2. **What to build**, in plain words (4–5 sentences): who uses the app, what they paste or say, which decisions Jev should make and what to do with the result.
+3. **For deployment (optional):** access to a VPS (e.g. Hostinger VPS KVM 2 through the Hostinger connector, or the server IP) and optionally a domain or subdomain.
 
-Gdy czegoś brakuje, zadaj najwyżej 2–3 krótkie pytania naraz. O sprawy techniczne nie pytaj, rozstrzygaj je sam.
+If something is missing, ask at most 2–3 short questions at once. Do not ask about technical details you can decide yourself.
 
-## Polecenia
+## Commands
 
-| Polecenie | Co robi |
+| Command | What it does |
 |---|---|
-| `npm install` | instaluje zależności (Node.js 22.12 lub nowszy) |
-| `npm run dev` | API na porcie 3000 i strona z Vite: http://localhost:5173 |
-| `npm test` | testy (vitest, bez sieci) |
-| `npm run typecheck` | sprawdza typy TypeScriptu |
-| `npm run build` | buduje stronę (`dist/`) i serwer (`dist-server/`) |
-| `npm start` | wersja produkcyjna na http://localhost:3000 (po `npm run build`) |
+| `npm install` | installs dependencies (Node.js 22.12 or newer) |
+| `npm run dev` | API on port 3000 and the page with Vite: http://localhost:5173 |
+| `npm test` | tests (vitest, no network) |
+| `npm run typecheck` | TypeScript type check |
+| `npm run build` | builds the page (`dist/`) and the server (`dist-server/`) |
+| `npm start` | production build on http://localhost:3000 (after `npm run build`) |
 
-Ustawienia w `.env` (wzór w `.env.example`): `OPENROUTER_API_KEY`, `JEV_MODEL`, `PORT`, `DAILY_BUDGET_USD`, `RATE_LIMIT_PER_MINUTE`, `BODY_LIMIT` (domyślnie `100kb`), `TZ` (strefa czasowa), na serwerze także `APP_NAME`. Zmienne środowiskowe mają pierwszeństwo przed `.env`.
+Settings in `.env` (template: `.env.example`): `OPENROUTER_API_KEY`, `JEV_MODEL`, `PORT`, `DAILY_BUDGET_USD`, `RATE_LIMIT_PER_MINUTE`, `BODY_LIMIT` (default `100kb`), `TZ` (time zone), and on the server also `APP_NAME`. Environment variables win over `.env`.
 
-## Jak działa starter
+## How the starter works
 
 ```
-przeglądarka --POST /api/recipes/<nazwa> {dane}--> Express --> przepis --> Jev (OpenRouter)
-             <--- {result, ms, cost, costEstimated, calls} <--- przepis.interpret() / run()
+browser --POST /api/recipes/<name> {data}--> Express --> recipe --> Jev (OpenRouter)
+        <--- {result, ms, cost, costEstimated, calls} <--- recipe.interpret() / run()
 ```
 
-Pytania do Jev siedzą na serwerze w **przepisach** (recipes). Przeglądarka wysyła tylko dane wejściowe, więc klucz i pytania nie wychodzą poza serwer.
+The questions for Jev live on the server, in **recipes**. The browser only sends input data, so neither the key nor the questions leave the server.
 
-| Plik | Rola |
+| File | Role |
 |---|---|
-| `server/jev.ts` | klient Jev: `createAskJev`, pytania `choice()` / `score()` / `noul()`, odczyt `readChoice()` / `readScore()` / `readNoul()`, `askMany()`, `JevError`. Zostaw bez zmian. |
-| `server/recipes/recipe.ts` | kontrakt przepisu, `defineRecipe()`, `RecipeContext` |
-| `server/recipes/<nazwa>.ts` | przepisy: jedna decyzja = jeden przepis |
-| `server/recipes/index.ts` | lista przepisów dostępnych pod `/api/recipes/<nazwa>` |
-| `server/context.ts` | jedyna droga przepisu do Jev: każde zapytanie sprawdza budżet i zapisuje koszt |
-| `server/routes.ts` | walidacja → przepis → `{result, ms, cost, costEstimated, calls}` |
-| `server/app.ts` | Express: limit rozmiaru zapytania, limit zapytań na IP, `/api/health`, `/api/stats`, serwowanie `dist/` |
-| `server/budget.ts` | dzienny limit wydatków na Jev (po przekroczeniu kod 402) |
-| `server/config.ts` | ustawienia z `.env` |
-| `src/lib/api.ts` | `callRecipe(nazwa, dane)` → `{result, ms, cost, costEstimated, calls}`, błędy gotowe do pokazania |
-| `src/components/CostBadge.tsx` | plakietka „Na żywo · 312 ms · 0,000021 $” |
-| `src/App.tsx`, `src/styles.css` | strona demo, do podmiany |
+| `server/jev.ts` | Jev client: `createAskJev`, questions `choice()` / `score()` / `noul()`, readers `readChoice()` / `readScore()` / `readNoul()`, `askMany()`, `JevError`. Leave it as is. |
+| `server/recipes/recipe.ts` | recipe contract, `defineRecipe()`, `RecipeContext` |
+| `server/recipes/<name>.ts` | recipes: one decision = one recipe |
+| `server/recipes/index.ts` | list of recipes served at `/api/recipes/<name>` |
+| `server/context.ts` | the only way a recipe reaches Jev: every request checks the budget and records its cost |
+| `server/routes.ts` | validation → recipe → `{result, ms, cost, costEstimated, calls}` |
+| `server/app.ts` | Express: body size limit, per-IP rate limit, `/api/health`, `/api/stats`, serves `dist/` |
+| `server/budget.ts` | daily Jev spending limit (402 once it is used up) |
+| `server/config.ts` | settings from `.env` |
+| `src/lib/api.ts` | `callRecipe(name, data)` → `{result, ms, cost, costEstimated, calls}`, errors ready to show |
+| `src/components/CostBadge.tsx` | badge “Live · 312 ms · $0.000021” |
+| `src/App.tsx`, `src/styles.css` | demo page, to be replaced |
 
-Kody błędów API (zawsze z polskim komunikatem w polu `error`): 400 złe dane, 402 wyczerpany budżet, 404 nie ma przepisu, 413 za duże zapytanie, 429 limit zapytań, 500 błąd serwera, 502 błąd Jev albo OpenRoutera.
-Na produkcji błędy Jev mają krótki, ogólny komunikat dla odwiedzających. Szczegóły (status, odpowiedź OpenRoutera) są tylko w logach serwera, a lokalnie w `npm run dev` także w komunikacie.
+API error codes (always with a readable message in `error`): 400 invalid input, 402 budget used up, 404 unknown recipe, 413 request too large, 429 rate limit, 500 server error, 502 Jev or OpenRouter error.
+In production, Jev errors show a short, generic message to visitors. Details (status, OpenRouter's answer) go to the server log only; locally, under `npm run dev`, they are also in the message.
 
-Dzienny licznik wydatków jest w pamięci serwera: zeruje się o północy w strefie `TZ` oraz przy każdym restarcie i wdrożeniu.
+The daily spending counter lives in server memory: it resets at midnight in the `TZ` zone and on every restart or redeploy.
 
-## Jak zbudować nową aplikację
+## How to build a new app
 
-1. Rozpisz decyzje: co wchodzi, o co zapytać Jev, co aplikacja robi z odpowiedzią. Liczenie, daty, porównania i sumy zostaw kodowi.
-2. Dla każdej decyzji dodaj przepis `server/recipes/<nazwa>.ts` (wzór niżej) i dopisz go do listy w `server/recipes/index.ts`.
-   **Nigdy nie rób ogólnego endpointu**, który przyjmuje pytania albo `state` z przeglądarki. Każdy mógłby wtedy używać klucza właściciela jako darmowego Jev.
-3. W schemacie `zod` przepisu ustaw maksymalne długości pól i rozmiary list oraz komunikaty walidacji po polsku.
-4. Na stronie wołaj `callRecipe<Wejście, Wynik>("<nazwa>", dane)` i przy **każdym** wyniku z Jev pokaż `CostBadge` (wzór niżej).
-   `src/` i `server/` to osobne projekty TypeScriptu, więc typ wyniku skopiuj na stronę (jak `DemoResult` w `src/App.tsx`).
-5. Zastąp stronę demo (`src/App.tsx`, `src/styles.css`). Interfejs po polsku, czytelny, z dużymi literami, zwykły CSS bez bibliotek UI.
-   Gdy aplikacja ma już własne przepisy, usuń `demo` z listy w `server/recipes/index.ts` oraz pliki `server/recipes/demo.ts` i `test/demo.test.ts`.
-6. Dopisz testy w `test/`: `interpret()` na przykładowych odpowiedziach i walidację wejścia (wzór: `test/demo.test.ts`). Testy nie łączą się z siecią, a `test/routes.test.ts` ma własne przepisy testowe, więc działa bez zmian.
-7. Przejdź listę „Zanim powiesz, że gotowe”.
+1. Write down the decisions: what goes in, what to ask Jev, what the app does with the answer. Counting, dates, comparisons and sums belong in code.
+2. For each decision add a recipe `server/recipes/<name>.ts` (template below) and add it to the list in `server/recipes/index.ts`.
+   **Never build a generic endpoint** that accepts questions or `state` from the browser. Anyone could then use the owner's key as a free Jev.
+3. In the recipe's `zod` schema set maximum lengths and list sizes, with validation messages in the UI language.
+4. On the page call `callRecipe<Input, Result>("<name>", data)` and show a `CostBadge` next to **every** result that comes from Jev (example below).
+   `src/` and `server/` are separate TypeScript projects, so copy the result type to the page (like `DemoResult` in `src/App.tsx`).
+5. Replace the demo page (`src/App.tsx`, `src/styles.css`). Readable interface with large type, plain CSS, no UI libraries.
+   Once the app has its own recipes, remove `demo` from the list in `server/recipes/index.ts` and delete `server/recipes/demo.ts` and `test/demo.test.ts`.
+6. Add tests in `test/`: `interpret()` on sample answers and input validation (template: `test/demo.test.ts`). Tests never touch the network; `test/routes.test.ts` has its own test recipes, so it keeps working.
+7. Go through “Before you say it is done”.
 
-Wzór przepisu (jedno zapytanie: `build` + `interpret`):
+Recipe template (one request: `build` + `interpret`):
 
 ```ts
 // server/recipes/lead.ts
@@ -87,10 +87,10 @@ export interface LeadResult {
 export const lead = defineRecipe({
   name: "lead",
   input: z.object({
-    text: z.string().trim().min(1, "Wpisz treść zapytania.").max(3000, "Zapytanie może mieć najwyżej 3000 znaków."),
+    text: z.string().trim().min(1, "Type the inquiry.").max(3000, "The inquiry can have at most 3000 characters."),
   }),
   build: ({ text }) => ({
-    state: `Inquiry from a potential client (it may be written in Polish):\n\n${text}`,
+    state: `Inquiry from a potential client:\n\n${text}`,
     questions: {
       service: choice("Which service does the sender ask about?", {
         website: "A company website or a landing page.",
@@ -124,16 +124,16 @@ const response = await callRecipe<{ text: string }, LeadResult>("lead", { text }
 <CostBadge ms={response.ms} cost={response.cost} calls={response.calls} estimated={response.costEstimated} />
 ```
 
-`state` może być tekstem albo obiektem (wyśle się jako JSON). Gdy danych jest kilka pól, złóż z nich obiekt.
+`state` can be text or an object (sent as JSON). When the input has several fields, put them into an object.
 
-## Wiele elementów naraz
+## Many items at once
 
-- **Jedno zapytanie, każdy element we własnym pytaniu.** Tekst elementu wpisz do `instructions` jego pytania. Pytania są oceniane niezależnie od siebie, więc element musi być w swoim pytaniu, a `state` to tylko wspólny kontekst (np. „Comments under a video about AI tools”). 20 pytań w jednym zapytaniu trwa prawie tyle co jedno.
-- **Limit 32 tys. tokenów** na całe zapytanie (stan + wszystkie pytania). Ogranicz listę w schemacie `zod`, np. `.max(30)` elementów i `.max(500)` znaków na element.
-- **Nigdy nie wysyłaj z przeglądarki osobnego zapytania na każdy element w pętli.** Limit zapytań na IP szybko to zablokuje. Wysyłaj całą listę jednym `callRecipe`.
-- **Więcej elementów, niż mieści jedno zapytanie:** przepis z `run` i `ctx.askMany()`. Dzieli pracę na paczki, wysyła najwyżej 8 zapytań naraz, sprawdza budżet przed każdym i sumuje koszt. Nie wołaj Jev w przepisie inaczej niż przez `ctx`.
+- **One request, each item in its own question.** Put the item's text into the `instructions` of its question. Questions are evaluated independently, so each item must be inside its own question; `state` is only the shared context (e.g. “Comments under a video about AI tools”). 20 questions in one request take about as long as one.
+- **32k-token limit** for the whole request (state + all questions). Cap the list in the `zod` schema, e.g. `.max(30)` items and `.max(500)` characters per item.
+- **Never send one request per item from the browser in a loop.** The per-IP rate limit will block it quickly. Send the whole list in one `callRecipe`.
+- **More items than fit into one request:** a recipe with `run` and `ctx.askMany()`. It splits the work into batches, keeps at most 8 requests in flight, checks the budget before each one and sums the cost. Never reach Jev from a recipe other than through `ctx`.
 
-Pytania budowane z danych (jedno zapytanie):
+Questions built from data (one request):
 
 ```ts
 const KINDS = {
@@ -146,7 +146,7 @@ const KINDS = {
 export const comments = defineRecipe({
   name: "comments",
   input: z.object({
-    comments: z.array(z.string().trim().min(1).max(500)).min(1).max(30, "Najwyżej 30 komentarzy naraz."),
+    comments: z.array(z.string().trim().min(1).max(500)).min(1).max(30, "At most 30 comments at once."),
   }),
   build: ({ comments }) => ({
     state: "Comments under a YouTube video about AI tools for small businesses.",
@@ -159,7 +159,7 @@ export const comments = defineRecipe({
 });
 ```
 
-Kilka zapytań (`run` + `ctx.askMany`), np. do 200 komentarzy w paczkach po 25:
+Several requests (`run` + `ctx.askMany`), e.g. up to 200 comments in batches of 25:
 
 ```ts
 export const manyComments = defineRecipe({
@@ -181,45 +181,45 @@ export const manyComments = defineRecipe({
 });
 ```
 
-Odpowiedź takiego przepisu ma `calls` (liczbę zapytań), `cost` (sumę) i `ms` (czas od pierwszego do ostatniego zapytania). `CostBadge` pokazuje liczbę zapytań, gdy jest ich więcej niż jedno.
+The response of such a recipe has `calls` (number of requests), `cost` (the sum) and `ms` (time from the first to the last request). `CostBadge` shows the number of requests when there is more than one.
 
-## Ściąga Jev
+## Jev cheat sheet
 
-| Typ | Do czego | `criteria` | Odpowiedź |
+| Type | Use it for | `criteria` | Answer |
 |---|---|---|---|
-| `choice` | wybór jednej opcji | obiekt `id → jednozdaniowy opis`, 2–255 opcji, zawsze z opcją `other` albo `none` | `choice`, `probabilities`, `confidence` (0–1) |
-| `score` | ocena na skali | **tablica** opisów poziomów od najniższego (indeks 0), 2–10 poziomów. Obiekt daje błąd 400. | `score` to średnia ważona indeksów (np. 1,07), `probabilities` dla poziomów, `confidence` |
-| `noul` | tak / nie | brak albo `{ "true": "...", "false": "..." }` | `noul` = prawdopodobieństwo „tak” (0–1), bez `confidence` |
+| `choice` | picking one option | object `id → one-sentence description`, 2–255 options, always include an `other` or `none` option | `choice`, `probabilities`, `confidence` (0–1) |
+| `score` | rating on a scale | **array** of level descriptions, lowest first (index 0), 2–10 levels. An object returns HTTP 400. | `score` is the weighted mean of level indexes (e.g. 1.07), `probabilities` per level, `confidence` |
+| `noul` | yes / no | none, or `{ "true": "...", "false": "..." }` | `noul` = probability of “yes” (0–1), no `confidence` |
 
-**Liczby.** Czas ok. 250–700 ms z Polski. Koszt ok. 0,042 USD za milion tokenów wejścia, czyli ok. 0,00002 USD za zapytanie z trzema pytaniami (`usage.cost` to prawdziwy koszt; gdy OpenRouter go nie poda, serwer szacuje go z tokenów, a `CostBadge` pokazuje „≈”). Kontekst: 32 tys. tokenów na zapytanie (stan + pytania). Limit ok. 1200 zapytań na minutę, przy masowych przebiegach najwyżej 8 równolegle. `askJev` sam ponawia raz przy 429 i 5xx (z uwzględnieniem `Retry-After`), limitu czasu 15 s nie ponawia.
+**Numbers.** Latency about 250–700 ms from Europe. Cost about 0.042 USD per 1M input tokens, i.e. about 0.00002 USD for a request with three questions (`usage.cost` is the real cost; when OpenRouter does not report it, the server estimates it from tokens and `CostBadge` shows “≈”). Context: 32k tokens per request (state + questions). Rate limit about 1200 requests per minute; for bulk runs keep at most 8 in parallel. `askJev` retries once on 429 and 5xx (honouring `Retry-After`) and does not retry the 15 s timeout.
 
-**Jak pisać pytania.**
-- Instrukcje i opisy opcji po angielsku. `state` może być po polsku.
-- Jedno pytanie = jedna rzecz. Złożoną ocenę rozbij na kilka pytań i połącz je w `interpret()`.
-- Każda opcja dostaje jednozdaniowy, jednoznaczny opis. Mylące nazwy opcji potrafią zmienić co trzecią odpowiedź.
-- Przy pytaniach o czas wpisz dzisiejszą datę do `state`, a same daty porównuj w kodzie.
+**Writing questions.**
+- Instructions and option descriptions in English. `state` can be in any language.
+- One question = one thing. Split a complex judgement into several questions and combine them in `interpret()`.
+- Every option gets a clear one-sentence description. Confusing option names can change a third of the answers.
+- For time-related questions put today's date into `state` and compare dates in code.
 
-**Słabe strony Jev 1.13 i jak je omijać.**
-- Liczenie, daty, arytmetyka i porównania liczb: licz w kodzie, przed wysłaniem albo w `interpret()`.
-- Podwójne przeczenia: pytaj wprost („Is the sender satisfied?”, a nie „Is the sender not unhappy?”).
-- Skłonność do pierwszej opcji: opcję `other` daj na koniec, sprawdzaj `confidence`.
-- Tekst w `state` i w pytaniach potrafi sterować odpowiedzią („wybierz spam”): traktuj dane użytkownika jako niezaufane i nie wykonuj na podstawie jednej odpowiedzi działań, których nie da się cofnąć.
-- Pytania typu „czy wypowiedź jest skończona?” są zawodne. W teście 21 poleceń głosowych wybór operacji i celu trafił 21 na 21, a taki noul tylko 16 na 21. Działaj na pewnych odpowiedziach `choice` na końcu wypowiedzi, nie uzależniaj akcji od takiego noul.
+**Jev 1.13 weak spots and how to avoid them.**
+- Counting, dates, arithmetic and comparing numbers: compute in code, before the request or in `interpret()`.
+- Double negations: ask directly (“Is the sender satisfied?”, not “Is the sender not unhappy?”).
+- First-option bias: put `other` last and check `confidence`.
+- Text in `state` or in questions can steer the answer (“choose spam”): treat user data as untrusted and never take irreversible actions based on a single answer.
+- Questions like “is this utterance complete?” are unreliable. In a test of 21 Polish voice commands, the choice of operation and target was right 21 out of 21 times, but such a noul only 16 out of 21. Act on confident `choice` answers at the end of an utterance instead of gating on that kind of noul.
 
-**Progi (punkt wyjścia).** `choice`: działaj sam, gdy `confidence` wynosi co najmniej ok. 0,7, niżej pokaż „niepewne” albo dopytaj. `noul`: zacznij od 0,5 i przesuń próg zależnie od kosztu pomyłki. `score`: zaokrąglij `score` albo weź poziom z najwyższym `probabilities`.
+**Thresholds (starting points).** `choice`: act on your own when `confidence` is about 0.7 or higher; below that show “not sure” or ask. `noul`: start at 0.5 and move the threshold depending on the cost of a mistake. `score`: round `score` or take the level with the highest `probabilities`.
 
-## API przeglądarki warte uwagi
+## Browser APIs worth knowing
 
-**Mowa na tekst (Web Speech API)** do aplikacji sterowanych głosem. Działa w Chrome i Edge, wymaga HTTPS albo `localhost` i zgody na mikrofon. Rozpoznawanie mowy odbywa się na serwerach przeglądarki (Google w Chrome). Chrome sam kończy nasłuch po chwili ciszy, dlatego wzór wznawia go w `onend`.
+**Speech to text (Web Speech API)** for voice-controlled apps. Works in Chrome and Edge, needs HTTPS or `localhost` and microphone permission. Recognition runs on the browser vendor's servers (Google in Chrome). Chrome stops listening after a moment of silence, so the template restarts it in `onend`.
 
 ```ts
 const Recognition = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
 let listening = false;
 
 function startListening(onFinal: (text: string) => void, onInterim: (text: string) => void, onProblem: (message: string) => void) {
-  if (!Recognition) return onProblem("Rozpoznawanie mowy działa w Chrome i Edge.");
+  if (!Recognition) return onProblem("Speech recognition works in Chrome and Edge.");
   const recognition = new Recognition();
-  recognition.lang = "pl-PL";
+  recognition.lang = "en-US"; // the user's language, e.g. "pl-PL"
   recognition.continuous = true;
   recognition.interimResults = true;
 
@@ -235,7 +235,7 @@ function startListening(onFinal: (text: string) => void, onInterim: (text: strin
   recognition.onerror = (event: any) => {
     if (event.error === "no-speech" || event.error === "aborted") return;
     if (event.error === "not-allowed" || event.error === "service-not-allowed") listening = false;
-    onProblem(`Rozpoznawanie mowy: ${event.error}`);
+    onProblem(`Speech recognition: ${event.error}`);
   };
   recognition.onend = () => {
     if (listening) recognition.start(); // Chrome stops after silence; keep going until the user stops
@@ -250,57 +250,57 @@ function startListening(onFinal: (text: string) => void, onInterim: (text: strin
 }
 ```
 
-## Zasady, których nie łamiemy
+## Rules we do not break
 
-- Klucz OpenRouter tylko w `.env` (lokalnie i na serwerze) albo w zmiennej środowiskowej.
-- Pytania do Jev tylko na serwerze, w przepisach. Żadnego ogólnego pośrednika do Jev. Przepisy wołają Jev tylko przez `ctx` albo `build`.
-- Dzienny budżet (`DAILY_BUDGET_USD`) i limit zapytań na IP (`RATE_LIMIT_PER_MINUTE`) zostają włączone.
-- Każdy wynik z Jev na stronie ma obok `CostBadge`.
-- Bez zbędnych zależności. Zanim dodasz bibliotekę, sprawdź, czy nie wystarczy kilka linijek kodu.
+- The OpenRouter key lives only in `.env` (locally and on the server) or in an environment variable.
+- Questions for Jev live only on the server, in recipes. No generic Jev proxy. Recipes reach Jev only through `build` or `ctx`.
+- The daily budget (`DAILY_BUDGET_USD`) and the per-IP rate limit (`RATE_LIMIT_PER_MINUTE`) stay on.
+- Every Jev result on the page has a `CostBadge` next to it.
+- No unnecessary dependencies. Before adding a library, check whether a few lines of code would do.
 
-## Zanim powiesz, że gotowe
+## Before you say it is done
 
-- [ ] `npm run typecheck` przechodzi.
-- [ ] `npm test` przechodzi.
-- [ ] `npm run build` przechodzi.
-- [ ] Jedno prawdziwe zapytanie do Jev: `npm run dev`, otwórz http://localhost:5173 i przejdź główną ścieżkę aplikacji (albo `curl -X POST localhost:3000/api/recipes/<nazwa> -H 'content-type: application/json' -d '{...}'`). Wynik ma sens, `CostBadge` pokazuje czas i koszt, błędy są po polsku.
-- [ ] `git grep --untracked -nE "sk-or-v1-[a-f0-9]{20,}"` nic nie znajduje (w repo i nowych plikach nie ma prawdziwego klucza).
+- [ ] `npm run typecheck` passes.
+- [ ] `npm test` passes.
+- [ ] `npm run build` passes.
+- [ ] One real Jev request: `npm run dev`, open http://localhost:5173 and go through the app's main flow (or `curl -X POST localhost:3000/api/recipes/<name> -H 'content-type: application/json' -d '{...}'`). The result makes sense, `CostBadge` shows time and cost, errors are readable.
+- [ ] `git grep --untracked -nE "sk-or-v1-[a-f0-9]{20,}"` finds nothing (no real key in the repo or in new files).
 
-Potem w 2–3 zdaniach powiedz użytkownikowi, co działa i jak to uruchomić.
+Then tell the user in 2–3 sentences what works and how to run it.
 
-## Wdrożenie na VPS (sprawdzone na Hostinger VPS KVM 2)
+## Deploying to a VPS (tested on Hostinger VPS KVM 2)
 
-Cel: użytkownik mówi „wdróż tę aplikację na mój VPS w Hostingerze”, a Ty robisz resztę. Najprostsza droga: Docker i jeden wspólny Caddy z HTTPS, bez Coolify i dodatkowych paneli. Działa na każdym VPS z Ubuntu albo Debianem.
+Goal: the user says “deploy this app to my VPS”, and you do the rest. The simplest path: Docker and one shared Caddy with HTTPS, no Coolify, no extra panels. It works on any Ubuntu or Debian VPS with root SSH access; it was tested on Hostinger VPS KVM 2 (2 vCPU, 8 GB RAM).
 
-### Twarde zasady
+### Hard rules
 
-- **Nigdy nie zatrzymuj, nie usuwaj i nie przestawiaj tego, co już działa na serwerze**: kontenerów, sieci, wolumenów, nginx, Traefika, Caddy z apt, paneli, plików konfiguracyjnych. Zmieniasz tylko zasoby z etykietą `jev-starter=1`, folder `/opt/apps/<NAZWA>` i własny blok w `/opt/caddy/Caddyfile`.
-- Gdy serwer nie pasuje do planu (inny system, zajęte porty 80/443, cudzy kontener `caddy` albo sieć `web`), **zatrzymaj się, opisz użytkownikowi, co widzisz, i zapytaj**, co dalej.
-- **DNS:** najpierw odczytaj strefę. Tylko **dodawaj** rekord dla nowej subdomeny. Nigdy nie zmieniaj `@`, `www`, MX ani istniejących rekordów. Jeśli narzędzie ma tryb nadpisywania (overwrite), wyłącz go; nadpisanie tylko po wyraźnej zgodzie użytkownika.
-- **Klucz:** kopiujesz plik `.env`, nigdy nie wypisujesz jego treści.
+- **Never stop, remove or reconfigure anything that already runs on the server**: containers, networks, volumes, nginx, Traefik, Caddy installed with apt, control panels, config files. You only change resources labelled `jev-starter=1`, the folder `/opt/apps/<APP>` and your own block in `/opt/caddy/Caddyfile`.
+- When the server does not match the plan (another OS, ports 80/443 taken, a `caddy` container or `web` network that is not ours), **stop, tell the user what you found and ask** how to proceed.
+- **DNS:** read the zone first. Only **add** a record for a new subdomain. Never touch `@`, `www`, MX or any existing record. If a tool has an overwrite mode, turn it off; overwrite only with the user's explicit consent.
+- **Key:** copy the `.env` file; never print its contents.
 
-**Konektor Hostinger (MCP)** jest opcjonalny. Jeśli jest podłączony, ma narzędzia do: listy serwerów VPS (nazwa, plan, IP, stan), kluczy SSH (dodanie klucza publicznego i podpięcie go do VPS), zapory VPS i strefy DNS domen kupionych w Hostingerze (odczyt rekordów, dodanie rekordu). Nazwy narzędzi różnią się między wersjami konektora, więc szukaj ich po funkcji. Bez konektora poproś użytkownika o IP serwera (w hPanelu: VPS → Przegląd).
+**The Hostinger connector (MCP) is optional.** When it is connected, it has tools to: list VPS servers (name, plan, IP, state), manage SSH keys (add a public key and attach it to a VPS), manage the VPS firewall, and read and add DNS records for domains bought at Hostinger. Tool names differ between connector versions, so look for them by function. Without the connector ask the user for the server IP (Hostinger: hPanel → VPS → Overview; other providers: their control panel).
 
-**Zmienne.** Każde polecenie poniżej zaczynaj od ich ustawienia (kolejne wywołania powłoki mogą nie pamiętać zmiennych):
-`IP=203.0.113.10 NAZWA=skrzynka-klientow HOST=skrzynka-klientow.203-0-113-10.sslip.io`
-`NAZWA`: małe litery, cyfry i myślniki, unikalna na serwerze. Zapis `${NAZWA:?}` przerywa polecenie, gdy nazwa jest pusta.
+**Variables.** Start every command below by setting them (each shell call may start fresh):
+`IP=203.0.113.10 APP=client-inbox HOST=client-inbox.203-0-113-10.sslip.io`
+`APP`: lowercase letters, digits and dashes, unique on the server. `${APP:?}` aborts the command when the name is empty.
 
-**0. Najpierw** przejdź listę „Zanim powiesz, że gotowe” i upewnij się, że lokalny `.env` ma klucz.
+**0. First** go through “Before you say it is done” and make sure the local `.env` has the key.
 
-**1. Serwer i IP.** Przez konektor pobierz listę VPS i weź IPv4 (gdy serwerów jest kilka, zapytaj który). Bez konektora zapytaj o IP.
+**1. Server and IP.** With the connector, list the VPS servers and take the IPv4 address (if there are several, ask which one). Without it, ask for the IP.
 
-**2. Dostęp SSH.**
+**2. SSH access.**
 
 ```bash
 ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new root@$IP 'echo ok'
 ```
 
-Jeśli to nie działa:
-- sprawdź, czy jest `~/.ssh/id_ed25519.pub`. Gdy go nie ma, utwórz klucz: `ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519 -C jev-starter` (powiedz użytkownikowi, że to robisz),
-- dodaj klucz publiczny przez konektor (klucze SSH → dodaj → podepnij do VPS) albo poproś użytkownika, żeby wkleił zawartość pliku `.pub` w panelu VPS, w sekcji kluczy SSH,
-- powtórz test. Nie proś o hasło roota w czacie, skoro można użyć klucza.
+If this fails:
+- check for `~/.ssh/id_ed25519.pub`. If it does not exist, create a key: `ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519 -C jev-starter` (tell the user you are doing it),
+- add the public key through the connector (SSH keys → add → attach to the VPS) or ask the user to paste the contents of the `.pub` file into the SSH keys section of their VPS panel,
+- try again. Do not ask for the root password in the chat when a key can be used.
 
-**3. Rozpoznanie serwera (zawsze, zanim cokolwiek zmienisz).**
+**3. Look at the server first (always, before changing anything).**
 
 ```bash
 ssh root@$IP 'grep -E "^(PRETTY_NAME|ID|VERSION_ID)=" /etc/os-release'
@@ -309,16 +309,16 @@ ssh root@$IP 'command -v docker >/dev/null && docker ps -a --format "{{.Names}}\
 ssh root@$IP 'ls /opt/apps 2>/dev/null; test -f /opt/caddy/Caddyfile && echo caddyfile-ok'
 ```
 
-| Co widzisz | Co robisz |
+| What you see | What you do |
 |---|---|
-| system inny niż Ubuntu albo Debian | zatrzymaj się i zapytaj |
-| porty 80/443 wolne, nie ma kontenera `caddy` ani sieci `web` | normalna ścieżka: krok 4 |
-| porty 80/443 zajmuje kontener `caddy` z etykietą `jev-starter=1` | to nasz Caddy, pomiń jego instalację |
-| porty 80/443 zajmuje coś innego (Traefik z szablonu n8n albo Coolify, nginx, Caddy z apt, panel) | zatrzymaj się, niczego nie zmieniaj, opisz to i zapytaj |
-| jest kontener `caddy` albo sieć `web` bez etykiety `jev-starter=1` | to nie nasze: zatrzymaj się i zapytaj |
-| jest już kontener albo folder `/opt/apps/` o nazwie `NAZWA` | wybierz inną nazwę (chyba że to aktualizacja tej samej aplikacji) |
+| an OS other than Ubuntu or Debian | stop and ask |
+| ports 80/443 free, no `caddy` container and no `web` network | normal path: step 4 |
+| ports 80/443 used by a `caddy` container labelled `jev-starter=1` | that is our Caddy; skip installing it |
+| ports 80/443 used by anything else (Traefik from an n8n or Coolify template, nginx, Caddy from apt, a panel) | stop, change nothing, describe it and ask |
+| a `caddy` container or `web` network without the `jev-starter=1` label | not ours: stop and ask |
+| a container or `/opt/apps/` folder already named `APP` | pick another name (unless you are updating that same app) |
 
-**4. Przygotowanie serwera (raz na VPS).**
+**4. Prepare the server (once per VPS).**
 
 ```bash
 ssh root@$IP 'command -v docker >/dev/null || curl -fsSL https://get.docker.com | sh'
@@ -327,57 +327,57 @@ ssh root@$IP 'test -f /opt/caddy/Caddyfile' || rsync -az deploy/caddy/ "root@$IP
 ssh root@$IP 'cd /opt/caddy && docker compose up -d'
 ```
 
-Nie nadpisuj istniejącego `/opt/caddy/Caddyfile`: są w nim bloki innych aplikacji.
+Never overwrite an existing `/opt/caddy/Caddyfile`: it holds the blocks of other apps.
 
-**5. Kod, `.env` i kontener.** Najpierw podgląd (`--dry-run`), potem właściwe kopiowanie:
+**5. Code, `.env` and the container.** Preview first (`--dry-run`), then copy for real:
 
 ```bash
-rsync -az --delete --dry-run --itemize-changes --exclude node_modules --exclude dist --exclude dist-server --exclude .git --exclude .env --exclude '.env.*' --exclude .claude --exclude .codex ./ "root@$IP:/opt/apps/${NAZWA:?}/"
-rsync -az --delete --exclude node_modules --exclude dist --exclude dist-server --exclude .git --exclude .env --exclude '.env.*' --exclude .claude --exclude .codex ./ "root@$IP:/opt/apps/${NAZWA:?}/"
-ssh root@$IP "test -f /opt/apps/${NAZWA:?}/.env" || scp .env "root@$IP:/opt/apps/${NAZWA:?}/.env"
-ssh root@$IP "cd /opt/apps/${NAZWA:?} && sed -i '/^APP_NAME=/d' .env && printf '\nAPP_NAME=%s\n' '$NAZWA' >> .env && chmod 600 .env && docker compose up -d --build && docker image prune -f --filter label=jev-starter=1"
+rsync -az --delete --dry-run --itemize-changes --exclude node_modules --exclude dist --exclude dist-server --exclude .git --exclude .env --exclude '.env.*' --exclude .claude --exclude .codex ./ "root@$IP:/opt/apps/${APP:?}/"
+rsync -az --delete --exclude node_modules --exclude dist --exclude dist-server --exclude .git --exclude .env --exclude '.env.*' --exclude .claude --exclude .codex ./ "root@$IP:/opt/apps/${APP:?}/"
+ssh root@$IP "test -f /opt/apps/${APP:?}/.env" || scp .env "root@$IP:/opt/apps/${APP:?}/.env"
+ssh root@$IP "cd /opt/apps/${APP:?} && sed -i '/^APP_NAME=/d' .env && printf '\nAPP_NAME=%s\n' '$APP' >> .env && chmod 600 .env && docker compose up -d --build && docker image prune -f --filter label=jev-starter=1"
 ```
 
-W podglądzie mają być tylko pliki projektu w `/opt/apps/NAZWA/`. `docker image prune` z filtrem usuwa wyłącznie stare obrazy tego startera.
+The preview must list only project files inside `/opt/apps/APP/`. `docker image prune` with the label filter removes only old images of this starter.
 
-Bez `rsync` (np. Windows z Git Bash) spakuj projekt do pliku i wyślij go przez `scp`. Nie przepuszczaj archiwum przez potok w PowerShellu, bo psuje dane binarne:
+Without `rsync` (e.g. Windows with Git Bash), pack the project into a file and send it with `scp`. Do not pipe the archive through PowerShell; it corrupts binary data:
 
 ```bash
 tar --exclude=node_modules --exclude=dist --exclude=dist-server --exclude=.git --exclude=.env --exclude='.env.*' --exclude=.claude --exclude=.codex -czf ../app.tgz .
-scp ../app.tgz "root@$IP:/tmp/${NAZWA:?}.tgz"
-ssh root@$IP "mkdir -p /opt/apps/${NAZWA:?} && tar -xzf /tmp/${NAZWA:?}.tgz -C /opt/apps/${NAZWA:?} && rm /tmp/${NAZWA:?}.tgz"
+scp ../app.tgz "root@$IP:/tmp/${APP:?}.tgz"
+ssh root@$IP "mkdir -p /opt/apps/${APP:?} && tar -xzf /tmp/${APP:?}.tgz -C /opt/apps/${APP:?} && rm /tmp/${APP:?}.tgz"
 ```
 
-Potem usuń lokalny `../app.tgz`. Ta metoda nie kasuje na serwerze plików usuniętych lokalnie.
+Then delete the local `../app.tgz`. This method does not remove files on the server that were deleted locally.
 
-**6. Adres z HTTPS** (potrzebny m.in. do mikrofonu w przeglądarce).
-- Domena w Hostingerze: przez konektor odczytaj strefę DNS, upewnij się, że subdomeny jeszcze nie ma, i **dodaj** tylko rekord A, np. `app` → `IP` (TTL 300). Poczekaj, aż `dig +short $HOST` zwróci IP. Domenę u innego dostawcy użytkownik ustawia sam, podaj mu rekord.
-- Bez domeny: `HOST=NAZWA.<IP z myślnikami zamiast kropek>.sslip.io`, np. `skrzynka-klientow.203-0-113-10.sslip.io`. Nic nie trzeba kupować.
+**6. An HTTPS address** (needed, among other things, for the microphone in browsers).
+- A domain at Hostinger: through the connector read the DNS zone, make sure the subdomain does not exist yet and **add** only an A record, e.g. `app` → `IP` (TTL 300). Wait until `dig +short $HOST` returns the IP. For a domain at another provider, the user adds the record; give them its exact values.
+- No domain: `HOST=APP.<IP with dashes instead of dots>.sslip.io`, e.g. `client-inbox.203-0-113-10.sslip.io`. Nothing to buy.
 
 ```bash
-ssh root@$IP "grep -q 'reverse_proxy ${NAZWA:?}:3000' /opt/caddy/Caddyfile || printf '\n%s {\n\timport security_headers\n\tencode\n\treverse_proxy %s:3000\n}\n' '$HOST' '$NAZWA' >> /opt/caddy/Caddyfile"
+ssh root@$IP "grep -q 'reverse_proxy ${APP:?}:3000' /opt/caddy/Caddyfile || printf '\n%s {\n\timport security_headers\n\tencode\n\treverse_proxy %s:3000\n}\n' '$HOST' '$APP' >> /opt/caddy/Caddyfile"
 ssh root@$IP 'cd /opt/caddy && docker compose exec -T caddy caddy validate --config /etc/caddy/Caddyfile && docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile'
 ```
 
-Jeśli walidacja zgłasza brak `security_headers`, dopisz na początku `/opt/caddy/Caddyfile` blok `(security_headers)` z `deploy/caddy/Caddyfile`. Caddy sam pobiera certyfikat HTTPS.
+If validation complains about a missing `security_headers`, add the `(security_headers)` block from `deploy/caddy/Caddyfile` at the top of `/opt/caddy/Caddyfile`. Caddy gets the HTTPS certificate on its own.
 
-**7. Sprawdzenie i przekazanie.**
+**7. Check and hand over.**
 
 ```bash
-curl -fsS "https://$HOST/api/health"   # pierwszy certyfikat może potrwać do minuty
+curl -fsS "https://$HOST/api/health"   # the first certificate can take up to a minute
 ```
 
-Potem wyślij jedno prawdziwe zapytanie do głównego przepisu (curl albo strona). Podaj użytkownikowi adres `https://HOST` i przypomnij:
-- warto mieć limit kredytów na kluczu OpenRouter,
-- aplikacja jest publiczna: każdy z linkiem może z niej korzystać, ale najwyżej do dziennego budżetu `DAILY_BUDGET_USD` i z limitem zapytań na IP `RATE_LIMIT_PER_MINUTE`. Zmienia się je w `/opt/apps/NAZWA/.env`, potem `docker compose up -d` w tym folderze.
+Then send one real request to the main recipe (curl or the page). Give the user `https://HOST` and remind them:
+- a credit limit on the OpenRouter key is a good idea,
+- the app is public: anyone with the link can use it, but only up to the daily budget `DAILY_BUDGET_USD` and with the per-IP limit `RATE_LIMIT_PER_MINUTE`. Change them in `/opt/apps/APP/.env`, then run `docker compose up -d` in that folder.
 
-**8. Aktualizacje.** Krok 5 jeszcze raz (podgląd, `rsync`, `docker compose up -d --build`, `docker image prune`). Serwerowy `.env` zostaje, bo jest wykluczony z kopiowania. Caddy i DNS bez zmian. Wdrożenie zeruje dzienny licznik wydatków.
+**8. Updates.** Step 5 again (preview, `rsync`, `docker compose up -d --build`, `docker image prune`). The server's `.env` stays because it is excluded from copying. Caddy and DNS stay as they are. A redeploy resets the daily spending counter.
 
-Kilka aplikacji na jednym VPS: każda ma swój folder w `/opt/apps`, swoją `NAZWA` i swój blok w Caddyfile. Caddy jest jeden. KVM 2 (2 vCPU, 8 GB RAM) spokojnie uciągnie kilka takich aplikacji.
+Several apps on one VPS: each has its own folder in `/opt/apps`, its own `APP` name and its own Caddyfile block. There is one Caddy. A KVM 2 handles several such apps easily.
 
-**Gdy coś nie działa.**
-- Logi aplikacji (tu są szczegóły błędów Jev): `ssh root@$IP "cd /opt/apps/${NAZWA:?} && docker compose logs --tail 100"`.
-- Logi Caddy: `ssh root@$IP 'docker logs caddy --tail 100'`. Błąd certyfikatu zwykle oznacza, że DNS jeszcze nie wskazuje na IP albo porty są zamknięte.
-- Strona się nie otwiera: sprawdź zaporę VPS (konektor albo panel). Muszą być otwarte TCP 80 i 443 (oraz 22 dla SSH). Do `docker-compose.yml` aplikacji nigdy nie dodawaj `ports:`: jedynym wejściem z internetu jest Caddy.
-- „container name already in use”: `NAZWA` jest zajęta. Wybierz inną, popraw `APP_NAME` w `.env` i blok w Caddyfile.
-- Caddy zwraca 502: kontener aplikacji nie działa albo ma inną nazwę (`ssh root@$IP 'docker ps'`).
+**When something does not work.**
+- App logs (this is where Jev error details are): `ssh root@$IP "cd /opt/apps/${APP:?} && docker compose logs --tail 100"`.
+- Caddy logs: `ssh root@$IP 'docker logs caddy --tail 100'`. A certificate error usually means DNS does not point to the IP yet or the ports are closed.
+- The page does not open: check the VPS firewall (connector or provider panel). TCP 80 and 443 must be open (and 22 for SSH). Never add `ports:` to the app's `docker-compose.yml`: Caddy is the only entry point from the internet.
+- “container name already in use”: the `APP` name is taken. Pick another one and fix `APP_NAME` in `.env` and the Caddyfile block.
+- Caddy answers 502: the app container is not running or has a different name (`ssh root@$IP 'docker ps'`).

@@ -1,4 +1,5 @@
 @AGENTS.md
 
-Wszystkie zasady projektu są w AGENTS.md powyżej: co musi podać użytkownik, jak dodawać przepisy, ściąga Jev i wdrożenie na Hostinger VPS.
-Rozmawiaj z użytkownikiem po polsku. Nigdy nie wypisuj klucza OpenRouter i nie commituj pliku `.env`.
+Reply in the user's language.
+All project rules are in AGENTS.md above: what the user provides, how to add recipes, the Jev cheat sheet and the VPS deployment.
+Never print the OpenRouter key and never commit `.env`.

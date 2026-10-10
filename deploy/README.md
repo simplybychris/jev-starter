@@ -1,20 +1,21 @@
-# Wdrożenie na VPS (np. Hostinger KVM 2)
+# Deploying to a VPS
 
-Najprościej: powiedz agentowi „wdróż tę aplikację na mój VPS w Hostingerze”. Pełna procedura dla agenta jest w [AGENTS.md](../AGENTS.md#wdrożenie-na-vps-sprawdzone-na-hostinger-vps-kvm-2). Poniżej to samo w skrócie, gdybyś chciał zrobić to ręcznie na serwerze z Ubuntu albo Debianem.
+The easy way: tell your coding agent “deploy this app to my VPS”. The full procedure for agents is in [AGENTS.md](../AGENTS.md#deploying-to-a-vps-tested-on-hostinger-vps-kvm-2).
+Below is the same in short, if you want to do it by hand. It works on any VPS with Ubuntu or Debian and root SSH access; it was tested on Hostinger VPS KVM 2.
 
-## Jak to jest poukładane na serwerze
+## Layout on the server
 
 ```
-/opt/caddy/                  wspólny Caddy (porty 80 i 443, certyfikaty HTTPS) – jeden na cały VPS
-/opt/apps/<nazwa-aplikacji>/ każda aplikacja w osobnym folderze, z własnym .env i kontenerem
+/opt/caddy/             shared Caddy (ports 80 and 443, HTTPS certificates), one per VPS
+/opt/apps/<app-name>/   each app in its own folder, with its own .env and container
 ```
 
-Caddy i aplikacje są w jednej sieci Dockera `web`. Aplikacje nie wystawiają portów na zewnątrz, ruch idzie tylko przez Caddy.
-Wszystko, co tworzy ten starter (kontenery, sieć, obrazy), ma etykietę `jev-starter=1`, więc łatwo odróżnić to od innych usług.
+Caddy and the apps share the Docker network `web`. Apps publish no ports; all traffic goes through Caddy.
+Everything this starter creates (containers, network, images) carries the label `jev-starter=1`, so it is easy to tell apart from other services.
 
-## Zanim zaczniesz
+## Before you start
 
-Sprawdź, co już działa na serwerze, i niczego z tego nie wyłączaj:
+Check what already runs on the server, and leave all of it alone:
 
 ```bash
 grep PRETTY_NAME /etc/os-release
@@ -22,43 +23,43 @@ ss -ltnp '( sport = :80 or sport = :443 )'
 docker ps -a; docker network ls
 ```
 
-Jeśli porty 80 i 443 zajmuje coś innego niż nasz Caddy (np. Traefik z szablonu n8n albo Coolify, nginx), ten sposób wdrożenia nie pasuje bez zmian. Zostaw działające usługi w spokoju i dopasuj konfigurację albo użyj osobnego serwera.
+If ports 80 and 443 are taken by something other than our Caddy (e.g. Traefik from an n8n or Coolify template, or nginx), this setup does not fit as is. Keep the running services untouched and adapt the configuration, or use a separate server.
 
-## Pierwszy raz na nowym VPS
+## First time on a new VPS
 
 ```bash
-curl -fsSL https://get.docker.com | sh                  # jeśli nie ma Dockera
-docker network create --label jev-starter=1 web          # jeśli nie ma sieci web
+curl -fsSL https://get.docker.com | sh                  # if Docker is missing
+docker network create --label jev-starter=1 web          # if the web network is missing
 mkdir -p /opt/caddy /opt/apps
-# skopiuj zawartość deploy/caddy/ do /opt/caddy, potem:
+# copy the contents of deploy/caddy/ to /opt/caddy, then:
 cd /opt/caddy && docker compose up -d
 ```
 
-## Nowa aplikacja
+## A new app
 
-1. Skopiuj projekt do `/opt/apps/<nazwa>` (bez `node_modules`, `dist`, `dist-server`, `.git`, `.env*`, `.claude`, `.codex`).
-2. Wgraj tam plik `.env` z kluczem i dopisz `APP_NAME=<nazwa>`.
-3. `cd /opt/apps/<nazwa> && docker compose up -d --build && docker image prune -f --filter label=jev-starter=1`
-4. Dopisz blok do `/opt/caddy/Caddyfile`:
+1. Copy the project to `/opt/apps/<app-name>` (without `node_modules`, `dist`, `dist-server`, `.git`, `.env*`, `.claude`, `.codex`).
+2. Upload your `.env` with the key there and add `APP_NAME=<app-name>`.
+3. `cd /opt/apps/<app-name> && docker compose up -d --build && docker image prune -f --filter label=jev-starter=1`
+4. Add a block to `/opt/caddy/Caddyfile`:
 
    ```
-   <nazwa>.<ip-z-myślnikami>.sslip.io {
+   <app-name>.<ip-with-dashes>.sslip.io {
    	import security_headers
    	encode
-   	reverse_proxy <nazwa>:3000
+   	reverse_proxy <app-name>:3000
    }
    ```
 
-   Zamiast sslip.io możesz użyć własnej subdomeny z rekordem A wskazującym na IP serwera. Dodaj nowy rekord, nie zmieniaj istniejących.
+   Instead of sslip.io you can use your own subdomain with an A record pointing to the server IP. Add a new record; do not change existing ones.
 5. `cd /opt/caddy && docker compose exec -T caddy caddy validate --config /etc/caddy/Caddyfile && docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile`
-6. Sprawdź `https://<host>/api/health`.
+6. Open `https://<host>/api/health`.
 
-## Aktualizacja
+## Updates
 
-Skopiuj projekt jeszcze raz (plik `.env` na serwerze zostaje) i uruchom `docker compose up -d --build` w folderze aplikacji. Wdrożenie zeruje dzienny licznik wydatków.
+Copy the project again (the server's `.env` stays) and run `docker compose up -d --build` in the app folder. A redeploy resets the daily spending counter.
 
-## Gdy coś nie działa
+## Troubleshooting
 
-- Logi aplikacji (szczegóły błędów Jev): `cd /opt/apps/<nazwa> && docker compose logs --tail 100`
-- Logi Caddy (certyfikaty, przekierowania): `docker logs caddy --tail 100`
-- Strona się nie otwiera: sprawdź, czy porty 80 i 443 są otwarte w zaporze VPS.
+- App logs (Jev error details): `cd /opt/apps/<app-name> && docker compose logs --tail 100`
+- Caddy logs (certificates, routing): `docker logs caddy --tail 100`
+- The page does not open: make sure ports 80 and 443 are open in the VPS firewall.
