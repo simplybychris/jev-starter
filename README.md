@@ -46,7 +46,7 @@ W tym samym oknie agenta napisz:
 
 > Wdróż tę aplikację na mój VPS w Hostingerze.
 
-Agent znajdzie serwer (przez konektor Hostinger albo zapyta o IP), skonfiguruje Dockera i Caddy, a na koniec poda adres z HTTPS. Jeśli masz domenę lub subdomenę, podaj ją. Bez domeny dostaniesz darmowy adres w sslip.io.
+Agent znajdzie serwer (przez konektor Hostinger albo zapyta o IP), sprawdzi, co już na nim działa, skonfiguruje Dockera i Caddy, a na koniec poda adres z HTTPS. Niczego, co już działa na serwerze, nie wyłącza ani nie zmienia. Jeśli masz domenę lub subdomenę, podaj ją: agent doda tylko nowy rekord. Bez domeny dostaniesz darmowy adres w sslip.io.
 Szczegóły dla ciekawych: [deploy/README.md](deploy/README.md).
 
 ## Koszty i bezpieczeństwo

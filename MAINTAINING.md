@@ -25,7 +25,7 @@ Wydanie: przenieś `[Unreleased]` do `[X.Y.Z] - RRRR-MM-DD`, podbij `version` w 
 1. `npm run typecheck`, `npm test`, `npm run build`.
 2. `docker build -t jev-starter-test .`
 3. Test na żywo: zbudowany serwer z prawdziwym kluczem w zmiennej środowiskowej (`OPENROUTER_API_KEY=... npm start` albo przez pęk kluczy), potem `curl -s -X POST localhost:3000/api/recipes/demo -H 'content-type: application/json' -d '{"text":"..."}'`. Klucz nie trafia do żadnego pliku.
-4. `git grep -nE "sk-or-v1-[a-f0-9]{20,}"` nic nie znajduje (w repo nie ma prawdziwego klucza).
+4. `git grep --untracked -nE "sk-or-v1-[a-f0-9]{20,}"` nic nie znajduje (w repo nie ma prawdziwego klucza).
 
 ## Zależności
 
