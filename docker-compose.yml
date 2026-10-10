@@ -1,6 +1,7 @@
 # One app = one container, no public ports.
 # The shared Caddy (deploy/caddy) reaches it as <APP_NAME>:3000 over the external "web" network.
-# Before the first start on a machine: docker network create web
+# Never add a "ports:" section here: Caddy is the only entry point from the internet.
+# Before the first start on a machine: docker network create --label jev-starter=1 web
 services:
   app:
     build: .
@@ -12,6 +13,9 @@ services:
       # Midnight in this zone resets the daily budget counter.
       TZ: ${TZ:-Europe/Warsaw}
     restart: unless-stopped
+    labels:
+      # Marks resources created by this starter, so a deploy never touches anything else.
+      - jev-starter=1
     networks:
       - web
     logging:

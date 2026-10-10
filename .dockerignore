@@ -8,3 +8,5 @@ dist-server
 .superpowers
 .DS_Store
 npm-debug.log*
+.claude
+.codex

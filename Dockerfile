@@ -10,6 +10,7 @@ RUN npm run build
 
 # ---- runtime: production dependencies only, runs as the unprivileged "node" user ----
 FROM node:22-alpine
+LABEL jev-starter="1"
 ENV NODE_ENV=production
 WORKDIR /app
 # Time zone data, so TZ (e.g. Europe/Warsaw) works for the daily budget reset.

@@ -1,11 +1,14 @@
 # Shared Caddy for every app on the VPS. Copy this folder to /opt/caddy once, then:
-#   docker network create web   (if it does not exist yet)
+#   docker network create --label jev-starter=1 web   (if it does not exist yet)
 #   cd /opt/caddy && docker compose up -d
 services:
   caddy:
     image: caddy:2-alpine
     container_name: caddy
     restart: unless-stopped
+    labels:
+      # Marks resources created by this starter, so a deploy never touches anything else.
+      - jev-starter=1
     ports:
       - "80:80"
       - "443:443"
