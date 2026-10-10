@@ -9,6 +9,8 @@ services:
     env_file: .env
     environment:
       PORT: "3000"
+      # Midnight in this zone resets the daily budget counter.
+      TZ: ${TZ:-Europe/Warsaw}
     restart: unless-stopped
     networks:
       - web

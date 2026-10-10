@@ -16,6 +16,8 @@ export interface Config {
   rateLimitPerMinute: number;
   /** Max JSON body size, e.g. "100kb". */
   bodyLimit: string;
+  /** IANA time zone for the daily budget reset (e.g. "Europe/Warsaw"), or undefined for the system zone. */
+  timeZone: string | undefined;
 }
 
 export class ConfigError extends Error {
@@ -34,6 +36,7 @@ const HINTS: Record<string, string> = {
   DAILY_BUDGET_USD: "podaj kwotę w USD większą od zera, np. 1",
   RATE_LIMIT_PER_MINUTE: "podaj liczbę całkowitą większą od zera, np. 60",
   BODY_LIMIT: "podaj rozmiar w kb albo mb, np. 100kb",
+  TZ: "podaj strefę czasową, np. Europe/Warsaw",
 };
 
 const schema = z.object({
@@ -46,7 +49,20 @@ const schema = z.object({
     .string()
     .regex(/^\d+(kb|mb)$/i)
     .default("100kb"),
+  TZ: z
+    .string()
+    .refine(isTimeZone)
+    .optional(),
 });
+
+function isTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 type EnvSource = Record<string, string | undefined>;
 
@@ -87,5 +103,6 @@ export function loadConfig(options: { env?: EnvSource; envFile?: string | null }
     dailyBudgetUsd: data.DAILY_BUDGET_USD,
     rateLimitPerMinute: data.RATE_LIMIT_PER_MINUTE,
     bodyLimit: data.BODY_LIMIT.toLowerCase(),
+    timeZone: data.TZ,
   };
 }

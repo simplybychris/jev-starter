@@ -18,6 +18,8 @@ function readConfig(): Config {
 }
 
 const config = readConfig();
+// The daily budget resets at midnight in this zone (Node picks up TZ changes at runtime).
+if (config.timeZone) process.env.TZ = config.timeZone;
 // `npm run dev` runs this file through tsx; Vite serves the page then. `npm start` runs dist-server/.
 const devMode = import.meta.url.endsWith(".ts");
 

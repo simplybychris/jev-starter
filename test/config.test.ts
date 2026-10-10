@@ -28,6 +28,7 @@ describe("loadConfig", () => {
       dailyBudgetUsd: 1,
       rateLimitPerMinute: 60,
       bodyLimit: "100kb",
+      timeZone: undefined,
     });
   });
 
@@ -61,5 +62,7 @@ describe("loadConfig", () => {
       /BODY_LIMIT/,
     );
     expect(loadConfig({ env: { OPENROUTER_API_KEY: "k", BODY_LIMIT: "2MB" }, envFile: null }).bodyLimit).toBe("2mb");
+    expect(() => loadConfig({ env: { OPENROUTER_API_KEY: "k", TZ: "Mars/Base" }, envFile: null })).toThrow(/TZ/);
+    expect(loadConfig({ env: { OPENROUTER_API_KEY: "k", TZ: "Europe/Warsaw" }, envFile: null }).timeZone).toBe("Europe/Warsaw");
   });
 });
