@@ -60,8 +60,8 @@ Kody błędów API (zawsze z polskim komunikatem w polu `error`): 400 złe dane,
 4. Na stronie wołaj `callRecipe<Wejście, Wynik>("<nazwa>", dane)` i przy **każdym** wyniku z Jev pokaż `<CostBadge ms={ms} cost={cost} />`.
    `src/` i `server/` to osobne projekty TypeScriptu, więc typ wyniku skopiuj na stronę (jak `DemoResult` w `src/App.tsx`).
 5. Zastąp stronę demo (`src/App.tsx`, `src/styles.css`). Interfejs po polsku, czytelny, z dużymi literami, zwykły CSS bez bibliotek UI.
-   Gdy aplikacja ma własne przepisy, usuń przepis `demo` z listy i jego test (`test/demo.test.ts`, odwołania w `test/routes.test.ts`).
-6. Dopisz testy w `test/`: `interpret()` na przykładowych odpowiedziach i walidację wejścia (wzory w `test/demo.test.ts` i `test/routes.test.ts`). Testy nie łączą się z siecią.
+   Gdy aplikacja ma już własne przepisy, usuń `demo` z listy w `server/recipes/index.ts` oraz pliki `server/recipes/demo.ts` i `test/demo.test.ts`.
+6. Dopisz testy w `test/`: `interpret()` na przykładowych odpowiedziach i walidację wejścia (wzór: `test/demo.test.ts`). Testy nie łączą się z siecią, a `test/routes.test.ts` ma własny przepis testowy, więc działa bez zmian.
 7. Przejdź listę „Zanim powiesz, że gotowe”.
 
 Wzór przepisu:
@@ -177,7 +177,7 @@ recognition.start();
 - [ ] `npm test` przechodzi.
 - [ ] `npm run build` przechodzi.
 - [ ] Jedno prawdziwe zapytanie do Jev: `npm run dev`, otwórz http://localhost:5173 i przejdź główną ścieżkę aplikacji (albo `curl -X POST localhost:3000/api/recipes/<nazwa> -H 'content-type: application/json' -d '{...}'`). Wynik ma sens, `CostBadge` pokazuje czas i koszt, błędy są po polsku.
-- [ ] `git grep -n "sk-or-"` nic nie znajduje.
+- [ ] `git grep -nE "sk-or-v1-[a-f0-9]{20,}"` nic nie znajduje (w repo nie ma prawdziwego klucza).
 
 Potem w 2–3 zdaniach powiedz użytkownikowi, co działa i jak to uruchomić.
 
