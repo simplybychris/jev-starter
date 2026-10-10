@@ -47,7 +47,7 @@ Open the folder in Claude Code or Codex and describe the app in 4–5 sentences.
 
 > Build an app on this starter that sorts sign-up requests for my language school.
 > I paste a request, and Jev decides which course it is about (English, German, Spanish, other), whether it is for a child or an adult, and how ready the person is to sign up.
-> Show the result in three cards with a suggested reply below them.
+> Show the result in three cards and, below them, the matching reply template from a short list I give you.
 > Simple interface with large type.
 
 The agent knows how to work with this project because it reads [AGENTS.md](AGENTS.md): it adds a recipe (the questions for Jev) on the server, builds the page and runs the checks.

@@ -29,7 +29,7 @@ Otwórz http://localhost:5173 i sprawdź demo.
 
 > Zbuduj na tym starterze aplikację do sortowania zgłoszeń z formularza mojej szkoły językowej.
 > Wklejam treść zgłoszenia, a Jev ocenia, jakiego kursu dotyczy, czy chodzi o dziecko czy dorosłego i jak bardzo osoba jest zdecydowana na zapis.
-> Wynik pokaż w trzech kartach, a pod nimi podpowiedź, co odpisać. Interfejs po polsku, z dużymi literami.
+> Wynik pokaż w trzech kartach, a pod nimi pasujący szablon odpowiedzi z krótkiej listy, którą Ci podam. Interfejs po polsku, z dużymi literami.
 
 Agent odpowie po polsku i zrobi interfejs po polsku. Wszystko, czego potrzebuje, znajdzie w [AGENTS.md](AGENTS.md).
 
