@@ -33,7 +33,7 @@ describe("DailyBudget", () => {
     expect(budget.snapshot()).toMatchObject({ day: "2026-10-11", requests: 0, spentUsd: 0 });
   });
 
-  it("explains the limit in Polish", () => {
-    expect(new DailyBudget(2.5).exceededMessage()).toMatch(/Dzienny limit .*2,5 USD/);
+  it("explains the limit", () => {
+    expect(new DailyBudget(2.5).exceededMessage()).toMatch(/daily Jev budget \(2\.5 USD\)/);
   });
 });

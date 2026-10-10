@@ -18,9 +18,9 @@ function answers(topic: string, confidence: number, urgencyScore: number, annoye
 
 describe("demo recipe", () => {
   it("validates the input", () => {
-    expect(demo.input.safeParse({ text: "  Dzień dobry  " })).toMatchObject({
+    expect(demo.input.safeParse({ text: "  Hello  " })).toMatchObject({
       success: true,
-      data: { text: "Dzień dobry" },
+      data: { text: "Hello" },
     });
     expect(demo.input.safeParse({ text: "   " }).success).toBe(false);
     expect(demo.input.safeParse({}).success).toBe(false);
@@ -28,8 +28,8 @@ describe("demo recipe", () => {
   });
 
   it("builds one request with choice, score and noul questions", () => {
-    const { state, questions } = demo.build({ text: "Faktura jest błędna." });
-    expect(state).toContain("Faktura jest błędna.");
+    const { state, questions } = demo.build({ text: "The invoice is wrong." });
+    expect(state).toContain("The invoice is wrong.");
     expect(questions.topic?.type).toBe("choice");
     expect(Object.keys((questions.topic as { criteria: object }).criteria)).toEqual([
       "offer",

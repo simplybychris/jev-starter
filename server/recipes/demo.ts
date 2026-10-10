@@ -4,7 +4,7 @@ import { defineRecipe } from "./recipe.js";
 
 /**
  * Example recipe: one Jev request with all three question types.
- * Input: a message from a client (Polish is fine).
+ * Input: a message from a client (any language).
  */
 
 export const TOPICS = ["offer", "complaint", "question", "spam", "other"] as const;
@@ -21,7 +21,7 @@ export interface DemoResult {
   annoyedP: number;
 }
 
-const MESSAGE_REQUIRED = "Wpisz treść wiadomości.";
+const MESSAGE_REQUIRED = "Type a message.";
 
 export const demo = defineRecipe({
   name: "demo",
@@ -31,11 +31,11 @@ export const demo = defineRecipe({
       .string({ error: MESSAGE_REQUIRED })
       .trim()
       .min(1, MESSAGE_REQUIRED)
-      .max(2000, "Wiadomość może mieć najwyżej 2000 znaków."),
+      .max(2000, "The message can have at most 2000 characters."),
   }),
 
   build: ({ text }) => ({
-    state: `Message from a client to a small business (it may be written in Polish):\n\n${text}`,
+    state: `Message from a client to a small business:\n\n${text}`,
     questions: {
       topic: choice("What is the main purpose of this message?", {
         offer: "The sender asks for a price quote or proposes a new order or cooperation.",

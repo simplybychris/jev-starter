@@ -5,9 +5,6 @@ import { createRecipeContext } from "./context.js";
 import { JevError, type AskJev } from "./jev.js";
 import type { RecipeRegistry } from "./recipes/recipe.js";
 
-// Polish messages for generic validation errors (custom messages in schemas still win).
-z.config(z.locales.pl());
-
 export interface RecipeRouterDeps {
   recipes: RecipeRegistry;
   askJev: AskJev;
@@ -19,7 +16,7 @@ export interface RecipeRouterDeps {
 function formatIssues(error: z.ZodError) {
   const issues = error.issues.map((issue) => ({ path: issue.path.join("."), message: issue.message }));
   const message = [...new Set(issues.map((issue) => issue.message))].join(" ");
-  return { error: message || "Nieprawidłowe dane wejściowe.", issues };
+  return { error: message || "Invalid input.", issues };
 }
 
 /**
@@ -33,7 +30,7 @@ export function createRecipeRouter({ recipes, askJev, budget, exposeErrorDetails
     const name = req.params.name;
     const recipe = recipes.get(name);
     if (!recipe) {
-      res.status(404).json({ error: `Nie ma przepisu „${name.slice(0, 60)}”.` });
+      res.status(404).json({ error: `There is no recipe "${name.slice(0, 60)}".` });
       return;
     }
 
@@ -64,7 +61,7 @@ export function createRecipeRouter({ recipes, askJev, budget, exposeErrorDetails
         return;
       }
       console.error(`[recipe] ${name}:`, error);
-      res.status(500).json({ error: "Wewnętrzny błąd serwera. Spróbuj ponownie później." });
+      res.status(500).json({ error: "Internal server error. Please try again later." });
     }
   });
 

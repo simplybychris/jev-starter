@@ -14,7 +14,7 @@ import { defineRecipe, registerRecipes } from "../server/recipes/recipe.js";
 const check = defineRecipe({
   name: "check",
   input: z.object({
-    text: z.string({ error: "Wpisz treść." }).trim().min(1, "Wpisz treść.").max(50, "Najwyżej 50 znaków."),
+    text: z.string({ error: "Type something." }).trim().min(1, "Type something.").max(50, "At most 50 characters."),
     count: z.number().int().max(5).optional(),
   }),
   build: ({ text }) => ({ state: text, questions: { polite: noul("Is the message polite?") } }),
@@ -93,7 +93,7 @@ describe("POST /api/recipes/:name", () => {
   it("returns the interpreted result with time and cost", async () => {
     const { app, askJev, budget } = setup();
     await withServer(app, async (base) => {
-      const response = await post(base, "/api/recipes/check", { text: "  Dzień dobry!  " });
+      const response = await post(base, "/api/recipes/check", { text: "  Hello there!  " });
       expect(response.status).toBe(200);
       expect(await response.json()).toEqual({
         result: { polite: true },
@@ -104,7 +104,7 @@ describe("POST /api/recipes/:name", () => {
       });
     });
     expect(askJev).toHaveBeenCalledTimes(1);
-    expect(askJev.mock.calls[0]![0].state).toBe("Dzień dobry!");
+    expect(askJev.mock.calls[0]![0].state).toBe("Hello there!");
     expect(budget.snapshot().requests).toBe(1);
   });
 
@@ -118,23 +118,21 @@ describe("POST /api/recipes/:name", () => {
     });
   });
 
-  it("rejects invalid input with 400 and a Polish message, without calling Jev", async () => {
+  it("rejects invalid input with 400 and a readable message, without calling Jev", async () => {
     const { app, askJev } = setup();
     await withServer(app, async (base) => {
       const missing = await post(base, "/api/recipes/check", {});
       expect(missing.status).toBe(400);
-      expect(await errorOf(missing)).toBe("Wpisz treść.");
+      expect(await errorOf(missing)).toBe("Type something.");
 
       const tooLong = await post(base, "/api/recipes/check", { text: "a".repeat(51) });
       expect(tooLong.status).toBe(400);
-      expect(await errorOf(tooLong)).toBe("Najwyżej 50 znaków.");
+      expect(await errorOf(tooLong)).toBe("At most 50 characters.");
 
-      // Schemas without custom messages still answer in Polish (zod locale).
+      // Schemas without custom messages fall back to zod's default (English) messages.
       const generic = await post(base, "/api/recipes/check", { text: "x", count: 10 });
       expect(generic.status).toBe(400);
-      const genericError = await errorOf(generic);
-      expect(genericError).not.toBe("");
-      expect(genericError).not.toMatch(/Too big|expected/i);
+      expect(await errorOf(generic)).toMatch(/Too big/i);
 
       const badJson = await post(base, "/api/recipes/check", "{text:");
       expect(badJson.status).toBe(400);
@@ -152,7 +150,7 @@ describe("POST /api/recipes/:name", () => {
     await withServer(app, async (base) => {
       const response = await post(base, "/api/recipes/nope", { text: "x" });
       expect(response.status).toBe(404);
-      expect(await errorOf(response)).toMatch(/Nie ma przepisu/);
+      expect(await errorOf(response)).toMatch(/no recipe/);
     });
   });
 
@@ -161,9 +159,9 @@ describe("POST /api/recipes/:name", () => {
     budget.record({ input_tokens: 1, output_tokens: 1, cost: 0.00002 });
     const { app, askJev } = setup({ budget });
     await withServer(app, async (base) => {
-      const response = await post(base, "/api/recipes/check", { text: "Dzień dobry" });
+      const response = await post(base, "/api/recipes/check", { text: "Hello" });
       expect(response.status).toBe(402);
-      expect(await errorOf(response)).toMatch(/Dzienny limit/);
+      expect(await errorOf(response)).toMatch(/daily Jev budget/);
     });
     expect(askJev).not.toHaveBeenCalled();
   });
@@ -171,16 +169,16 @@ describe("POST /api/recipes/:name", () => {
   it("maps Jev errors to 502 with a public message, details only in development", async () => {
     const failing = vi
       .fn<AskJev>()
-      .mockRejectedValue(new JevError("OpenRouter odrzucił klucz API (401). Sprawdź OPENROUTER_API_KEY w .env.", 401));
+      .mockRejectedValue(new JevError("OpenRouter rejected the API key (401). Check OPENROUTER_API_KEY in .env.", 401));
     await withServer(setup({ askJev: failing }).app, async (base) => {
-      const response = await post(base, "/api/recipes/check", { text: "Dzień dobry" });
+      const response = await post(base, "/api/recipes/check", { text: "Hello" });
       expect(response.status).toBe(502);
       const error = await errorOf(response);
-      expect(error).toMatch(/konfiguracją/);
+      expect(error).toMatch(/configuration/);
       expect(error).not.toMatch(/OPENROUTER_API_KEY|\.env|401/);
     });
     await withServer(setup({ askJev: failing, exposeErrorDetails: true }).app, async (base) => {
-      const response = await post(base, "/api/recipes/check", { text: "Dzień dobry" });
+      const response = await post(base, "/api/recipes/check", { text: "Hello" });
       expect(await errorOf(response)).toMatch(/OPENROUTER_API_KEY/);
     });
   });
@@ -188,7 +186,7 @@ describe("POST /api/recipes/:name", () => {
   it("maps other errors to 500 without details", async () => {
     const broken = vi.fn<AskJev>().mockRejectedValue(new Error("boom"));
     await withServer(setup({ askJev: broken }).app, async (base) => {
-      const response = await post(base, "/api/recipes/check", { text: "Dzień dobry" });
+      const response = await post(base, "/api/recipes/check", { text: "Hello" });
       expect(response.status).toBe(500);
       expect(await errorOf(response)).not.toMatch(/boom/);
     });
@@ -218,7 +216,7 @@ describe("POST /api/recipes/:name", () => {
       expect((await post(base, "/api/recipes/check", { text: "2" })).status).toBe(200);
       const limited = await post(base, "/api/recipes/check", { text: "3" });
       expect(limited.status).toBe(429);
-      expect(await errorOf(limited)).toMatch(/Za dużo zapytań/);
+      expect(await errorOf(limited)).toMatch(/Too many requests/);
       expect((await fetch(`${base}/api/health`)).status).toBe(200);
     });
   });
@@ -264,8 +262,8 @@ describe("other endpoints", () => {
       expect(await (await fetch(`${base}/api/stats`)).json()).toMatchObject({ requests: 0, spentUsd: 0, limitUsd: 1 });
       const missing = await fetch(`${base}/api/nothing`);
       expect(missing.status).toBe(404);
-      expect(await errorOf(missing)).toMatch(/Nie ma takiego adresu/);
-      expect(await (await fetch(`${base}/`)).text()).toMatch(/serwer API/);
+      expect(await errorOf(missing)).toMatch(/No such API endpoint/);
+      expect(await (await fetch(`${base}/`)).text()).toMatch(/API server/);
     });
   });
 

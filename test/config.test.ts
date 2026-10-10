@@ -12,10 +12,10 @@ function envFile(content: string): string {
 }
 
 describe("loadConfig", () => {
-  it("fails fast with a Polish message when the key is missing", () => {
+  it("fails fast with a clear message when the key is missing", () => {
     expect(() => loadConfig({ env: {}, envFile: null })).toThrow(ConfigError);
     expect(() => loadConfig({ env: { OPENROUTER_API_KEY: "  " }, envFile: null })).toThrow(
-      /Brak klucza OPENROUTER_API_KEY/,
+      /OPENROUTER_API_KEY is missing/,
     );
   });
 

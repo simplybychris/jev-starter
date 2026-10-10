@@ -24,15 +24,15 @@ export interface AppOptions {
 const apiErrorHandler = (bodyLimit: string): ErrorRequestHandler => (error, _req, res, _next) => {
   const type = (error as { type?: string }).type;
   if (type === "entity.too.large") {
-    res.status(413).json({ error: `Za dużo danych w zapytaniu (limit to ${bodyLimit}).` });
+    res.status(413).json({ error: `Too much data in the request (limit: ${bodyLimit}).` });
     return;
   }
   if (type === "entity.parse.failed") {
-    res.status(400).json({ error: "Nieprawidłowy JSON w zapytaniu." });
+    res.status(400).json({ error: "Invalid JSON in the request." });
     return;
   }
   console.error("[api]", error);
-  res.status(500).json({ error: "Wewnętrzny błąd serwera. Spróbuj ponownie później." });
+  res.status(500).json({ error: "Internal server error. Please try again later." });
 };
 
 export function createApp(options: AppOptions): Express {
@@ -50,7 +50,7 @@ export function createApp(options: AppOptions): Express {
       legacyHeaders: false,
       skip: (req) => req.path === "/health",
       handler: (_req, res) => {
-        res.status(429).json({ error: "Za dużo zapytań. Odczekaj minutę i spróbuj ponownie." });
+        res.status(429).json({ error: "Too many requests. Wait a minute and try again." });
       },
     }),
   );
@@ -64,7 +64,7 @@ export function createApp(options: AppOptions): Express {
   });
   api.use(createRecipeRouter(options));
   api.use((_req, res) => {
-    res.status(404).json({ error: "Nie ma takiego adresu API." });
+    res.status(404).json({ error: "No such API endpoint." });
   });
   api.use(apiErrorHandler(options.bodyLimit));
 
@@ -84,8 +84,8 @@ export function createApp(options: AppOptions): Express {
   } else {
     if (staticDir) console.warn(`[app] ${join(staticDir, "index.html")} not found. Run npm run build first.`);
     const hint = staticDir
-      ? "Strona jest chwilowo niedostępna."
-      : "To jest serwer API. Stronę otwórz pod adresem z Vite (zwykle http://localhost:5173).";
+      ? "The page is temporarily unavailable."
+      : "This is the API server. Open the page at the address Vite prints (usually http://localhost:5173).";
     app.get("/", (_req, res) => {
       res.type("text/plain; charset=utf-8").send(hint);
     });

@@ -57,8 +57,8 @@ export class DailyBudget {
   }
 
   exceededMessage(): string {
-    const limit = this.limitUsd.toLocaleString("pl-PL");
-    return `Dzienny limit wydatków na Jev (${limit} USD) został wykorzystany. Aplikacja zadziała znowu po północy (czas serwera).`;
+    const limit = this.limitUsd.toLocaleString("en-US");
+    return `The daily Jev budget (${limit} USD) has been used up. The app will work again after midnight (server time).`;
   }
 
   record(usage: JevUsage): void {

@@ -63,14 +63,14 @@ describe("askJev", () => {
     const fetch = mockFetch(jsonResponse(200, OK_BODY));
     const askJev = createAskJev({ apiKey: API_KEY, fetch });
 
-    const result = await askJev({ state: "Faktura nie doszła.", questions });
+    const result = await askJev({ state: "The invoice never arrived.", questions });
 
     expect(fetch).toHaveBeenCalledTimes(1);
     const [url, init] = fetch.mock.calls[0]!;
     expect(url).toBe(JEV_URL);
     expect(init?.method).toBe("POST");
     expect((init?.headers as Record<string, string>).Authorization).toBe(`Bearer ${API_KEY}`);
-    expect(JSON.parse(String(init?.body))).toEqual({ model: "jev-1.13", state: "Faktura nie doszła.", questions });
+    expect(JSON.parse(String(init?.body))).toEqual({ model: "jev-1.13", state: "The invoice never arrived.", questions });
 
     expect(result.answers.department).toMatchObject({ type: "choice", choice: "technical" });
     expect(result.usage).toEqual({ input_tokens: 480, output_tokens: 77, cost: 0.00002016 });
@@ -97,7 +97,7 @@ describe("askJev", () => {
     expect(failing).toHaveBeenCalledTimes(2);
     expect(error).toBeInstanceOf(JevError);
     expect(error.status).toBe(502);
-    expect(error.message).toMatch(/chwilowo niedostępny/);
+    expect(error.message).toMatch(/temporarily unavailable/);
   });
 
   it("does not retry client errors and keeps the upstream details", async () => {
@@ -106,11 +106,11 @@ describe("askJev", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(error).toBeInstanceOf(JevError);
     expect(error.status).toBe(400);
-    expect(error.message).toMatch(/Jev odrzucił zapytanie/);
+    expect(error.message).toMatch(/Jev rejected the request/);
     expect(error.message).toMatch(/criteria must be an array/);
   });
 
-  it("maps 401 to a Polish key hint and never leaks the key", async () => {
+  it("maps 401 to a key hint and never leaks the key", async () => {
     const fetch = mockFetch(jsonResponse(401, { error: { message: `Invalid key ${API_KEY}` } }));
     const error = await createAskJev({ apiKey: API_KEY, fetch })({ state: "x", questions }).catch((e) => e);
     expect(error.status).toBe(401);
@@ -128,7 +128,7 @@ describe("askJev", () => {
 
     const offline = await createAskJev({ apiKey: API_KEY, fetch: mockFetch(new TypeError("fetch failed")) })({ state: "x", questions }).catch((e) => e);
     expect(offline.status).toBe(502);
-    expect(offline.message).toMatch(/połączyć/);
+    expect(offline.message).toMatch(/Could not connect/);
   });
 
   it("rejects a 200 response without answers", async () => {

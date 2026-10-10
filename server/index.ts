@@ -39,15 +39,15 @@ const server = app.listen(config.port, (error) => {
     const busy = (error as NodeJS.ErrnoException).code === "EADDRINUSE";
     console.error(
       busy
-        ? `Port ${config.port} jest zajęty. Zmień PORT w .env albo zamknij program, który go używa.`
-        : `Nie udało się uruchomić serwera: ${error.message}`,
+        ? `Port ${config.port} is already in use. Change PORT in .env or close the program that uses it.`
+        : `Could not start the server: ${error.message}`,
     );
     process.exit(1);
   }
   console.log(
     devMode
-      ? `API działa na porcie ${config.port}. Stronę otwórz pod adresem z Vite (zwykle http://localhost:5173).`
-      : `Aplikacja działa: http://localhost:${config.port}`,
+      ? `API running on port ${config.port}. Open the page at the address Vite prints (usually http://localhost:5173).`
+      : `App running: http://localhost:${config.port}`,
   );
 });
 

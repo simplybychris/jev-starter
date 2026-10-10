@@ -25,18 +25,18 @@ export class ConfigError extends Error {
 }
 
 const MISSING_KEY = [
-  "Brak klucza OPENROUTER_API_KEY.",
-  "Skopiuj plik .env.example jako .env i wklej w nim klucz z https://openrouter.ai/settings/keys",
-  "(albo ustaw zmienną środowiskową OPENROUTER_API_KEY).",
+  "OPENROUTER_API_KEY is missing.",
+  "Copy .env.example to .env and paste your key from https://openrouter.ai/settings/keys",
+  "(or set the OPENROUTER_API_KEY environment variable).",
 ].join("\n");
 
 const HINTS: Record<string, string> = {
-  JEV_MODEL: "podaj nazwę modelu, np. jev-1.13",
-  PORT: "podaj numer portu, np. 3000",
-  DAILY_BUDGET_USD: "podaj kwotę w USD większą od zera, np. 1",
-  RATE_LIMIT_PER_MINUTE: "podaj liczbę całkowitą większą od zera, np. 60",
-  BODY_LIMIT: "podaj rozmiar w kb albo mb, np. 100kb",
-  TZ: "podaj strefę czasową, np. Europe/Warsaw",
+  JEV_MODEL: "use a model name, e.g. jev-1.13",
+  PORT: "use a port number, e.g. 3000",
+  DAILY_BUDGET_USD: "use an amount in USD greater than zero, e.g. 1",
+  RATE_LIMIT_PER_MINUTE: "use a whole number greater than zero, e.g. 60",
+  BODY_LIMIT: "use a size in kb or mb, e.g. 100kb",
+  TZ: "use a time zone name, e.g. Europe/Warsaw",
 };
 
 const schema = z.object({
@@ -91,8 +91,8 @@ export function loadConfig(options: { env?: EnvSource; envFile?: string | null }
   const parsed = schema.safeParse(merged);
   if (!parsed.success) {
     const key = String(parsed.error.issues[0]?.path[0] ?? "");
-    const hint = HINTS[key] ?? "sprawdź wartość";
-    throw new ConfigError(`Nieprawidłowa wartość ${key} w .env: ${hint}.`);
+    const hint = HINTS[key] ?? "check the value";
+    throw new ConfigError(`Invalid ${key} in .env: ${hint}.`);
   }
 
   const data = parsed.data;

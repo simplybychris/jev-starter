@@ -89,7 +89,7 @@ export interface JevUsage {
 }
 
 export interface JevRequest {
-  /** Context for the questions. May be Polish. Objects are sent as JSON. */
+  /** Context for the questions, in any language. Objects are sent as JSON. */
   state: string | object;
   questions: JevQuestions;
 }
@@ -106,11 +106,11 @@ export type AskJev = (request: JevRequest) => Promise<JevResult>;
 
 /** Short message that is safe to show to any visitor (no setup hints, no upstream details). */
 export function publicMessageFor(status: number): string {
-  if (status === 400) return "Aplikacja ma chwilowy problem z zapytaniem do Jev. Spróbuj ponownie później.";
+  if (status === 400) return "The app had a problem with its request to Jev. Please try again later.";
   if ([401, 402, 403, 404].includes(status)) {
-    return "Aplikacja ma problem z konfiguracją po stronie serwera. Spróbuj ponownie później.";
+    return "The app has a server configuration problem. Please try again later.";
   }
-  return "Jev jest chwilowo niedostępny. Spróbuj ponownie za chwilę.";
+  return "Jev is temporarily unavailable. Please try again in a moment.";
 }
 
 export class JevError extends Error {
@@ -134,7 +134,7 @@ function readAnswer<T extends JevAnswer["type"]>(
 ): Extract<JevAnswer, { type: T }> {
   const answer = answers[key];
   if (!answer || answer.type !== type) {
-    throw new JevError(`Jev nie zwrócił odpowiedzi typu ${type} na pytanie „${key}”.`, 502);
+    throw new JevError(`Jev returned no ${type} answer for question "${key}".`, 502);
   }
   return answer as Extract<JevAnswer, { type: T }>;
 }
@@ -176,8 +176,8 @@ export function retryDelay(response: Response, fallbackMs: number, maxMs: number
 }
 
 function redact(text: string, apiKey: string): string {
-  let clean = text.replace(/sk-or-[A-Za-z0-9_-]+/g, "[ukryty klucz]");
-  if (apiKey) clean = clean.split(apiKey).join("[ukryty klucz]");
+  let clean = text.replace(/sk-or-[A-Za-z0-9_-]+/g, "[hidden key]");
+  if (apiKey) clean = clean.split(apiKey).join("[hidden key]");
   return clean.length > 300 ? `${clean.slice(0, 300)}…` : clean;
 }
 
@@ -196,18 +196,18 @@ function upstreamMessage(payload: unknown): string {
 }
 
 function describeStatus(status: number): string {
-  if (status === 400) return "Jev odrzucił zapytanie (400). Sprawdź format pytań: score wymaga listy poziomów, choice słownika opcji.";
-  if (status === 401 || status === 403) return `OpenRouter odrzucił klucz API (${status}). Sprawdź OPENROUTER_API_KEY w .env.`;
-  if (status === 402) return "Na koncie OpenRouter brakuje środków albo klucz osiągnął swój limit kredytów (402).";
-  if (status === 404) return "OpenRouter nie zna tego modelu (404). Sprawdź JEV_MODEL w .env.";
-  if (status === 429) return "Za dużo zapytań do Jev (429). Odczekaj chwilę i spróbuj ponownie.";
-  if (status >= 500) return `Jev jest chwilowo niedostępny (${status}). Spróbuj ponownie za chwilę.`;
-  return `OpenRouter zwrócił błąd ${status}.`;
+  if (status === 400) return "Jev rejected the request (400). Check the question format: score needs a list of levels, choice an object of options.";
+  if (status === 401 || status === 403) return `OpenRouter rejected the API key (${status}). Check OPENROUTER_API_KEY in .env.`;
+  if (status === 402) return "The OpenRouter account is out of credits or the key reached its credit limit (402).";
+  if (status === 404) return "OpenRouter does not know this model (404). Check JEV_MODEL in .env.";
+  if (status === 429) return "Too many requests to Jev (429). Wait a moment and try again.";
+  if (status >= 500) return `Jev is temporarily unavailable (${status}). Try again in a moment.`;
+  return `OpenRouter returned error ${status}.`;
 }
 
 function toJevError(status: number, payload: unknown, apiKey: string): JevError {
   const details = redact(upstreamMessage(payload), apiKey);
-  const message = describeStatus(status) + (details ? ` Szczegóły: ${details}` : "");
+  const message = describeStatus(status) + (details ? ` Details: ${details}` : "");
   return new JevError(message, status);
 }
 
@@ -241,9 +241,9 @@ export function createAskJev(options: JevClientOptions): AskJev {
       });
     } catch (error) {
       if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
-        throw new JevError(`Jev nie odpowiedział w ciągu ${timeoutMs / 1000} s. Spróbuj ponownie.`, 504);
+        throw new JevError(`Jev did not answer within ${timeoutMs / 1000} s. Try again.`, 504);
       }
-      throw new JevError("Nie udało się połączyć z OpenRouterem. Sprawdź połączenie z internetem.", 502);
+      throw new JevError("Could not connect to OpenRouter. Check the internet connection.", 502);
     }
   }
 
@@ -252,7 +252,7 @@ export function createAskJev(options: JevClientOptions): AskJev {
     try {
       text = await response.text();
     } catch {
-      throw new JevError("Połączenie z Jev zostało przerwane w trakcie odpowiedzi.", 502);
+      throw new JevError("The connection to Jev broke while reading the answer.", 502);
     }
     try {
       return JSON.parse(text);
@@ -282,7 +282,7 @@ export function createAskJev(options: JevClientOptions): AskJev {
     const data = payload as { model?: unknown; answers?: unknown; usage?: Record<string, unknown> } | null;
     if (!data || typeof data !== "object" || !data.answers || typeof data.answers !== "object") {
       const details = redact(upstreamMessage(payload), apiKey);
-      throw new JevError(`Nieoczekiwana odpowiedź Jev.${details ? ` Szczegóły: ${details}` : ""}`, 502);
+      throw new JevError(`Unexpected answer from Jev.${details ? ` Details: ${details}` : ""}`, 502);
     }
 
     const inputTokens = toNumber(data.usage?.input_tokens);
