@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type { JevAnswers, JevQuestions } from "../jev.js";
+import type { JevAnswers, JevQuestions, JevRequest } from "../jev.js";
 
 /**
  * A recipe = one decision your app asks Jev about.
@@ -10,8 +10,8 @@ export interface Recipe<I, R> {
   name: string;
   /** Validates the browser input before Jev is called. Always set max lengths. */
   input: z.ZodType<I>;
-  /** Builds the Jev request: context (state) and questions (English instructions). */
-  build(input: I): { state: string; questions: JevQuestions };
+  /** Builds the Jev request: context (state: text or an object sent as JSON) and questions (English instructions). */
+  build(input: I): { state: JevRequest["state"]; questions: JevQuestions };
   /** Turns Jev probabilities into the app's result. Thresholds and arithmetic live here. */
   interpret(answers: JevAnswers, input: I): R;
 }
