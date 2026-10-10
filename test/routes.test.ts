@@ -1,0 +1,178 @@
+import { once } from "node:events";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import type { AddressInfo } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createApp, type AppOptions } from "../server/app.js";
+import { DailyBudget } from "../server/budget.js";
+import { JevError, type AskJev, type JevResult } from "../server/jev.js";
+import { recipes } from "../server/recipes/index.js";
+
+const JEV_RESULT: JevResult = {
+  model: "typesafe/jev-1.13-20260917",
+  ms: 312,
+  usage: { input_tokens: 480, output_tokens: 77, cost: 0.000021 },
+  answers: {
+    topic: { type: "choice", choice: "complaint", probabilities: { complaint: 0.97 }, confidence: 0.97 },
+    urgency: { type: "score", score: 3.2, legend: {}, probabilities: {}, confidence: 0.8 },
+    annoyed: { type: "noul", noul: 0.9 },
+  },
+};
+
+function setup(overrides: Partial<AppOptions> = {}) {
+  const askJev = vi.fn<AskJev>().mockResolvedValue(JEV_RESULT);
+  const budget = new DailyBudget(1);
+  const app = createApp({
+    askJev,
+    budget,
+    recipes,
+    model: "jev-1.13",
+    rateLimitPerMinute: 100,
+    staticDir: null,
+    ...overrides,
+  });
+  return { app, askJev, budget };
+}
+
+async function withServer(app: ReturnType<typeof createApp>, run: (base: string) => Promise<void>) {
+  const server = app.listen(0);
+  await once(server, "listening");
+  const { port } = server.address() as AddressInfo;
+  try {
+    await run(`http://127.0.0.1:${port}`);
+  } finally {
+    server.close();
+  }
+}
+
+function post(base: string, path: string, body: unknown) {
+  return fetch(base + path, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: typeof body === "string" ? body : JSON.stringify(body),
+  });
+}
+
+async function errorOf(response: Response): Promise<string> {
+  const body = (await response.json()) as { error?: string };
+  return body.error ?? "";
+}
+
+beforeEach(() => {
+  vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
+});
+afterEach(() => vi.restoreAllMocks());
+
+describe("POST /api/recipes/:name", () => {
+  it("returns the interpreted result with time and cost", async () => {
+    const { app, askJev, budget } = setup();
+    await withServer(app, async (base) => {
+      const response = await post(base, "/api/recipes/demo", { text: "Faktura jest błędna, proszę o korektę." });
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({
+        result: { topic: "complaint", topicConfidence: 0.97, urgency: 4, annoyed: true, annoyedP: 0.9 },
+        ms: 312,
+        cost: 0.000021,
+      });
+    });
+    expect(askJev).toHaveBeenCalledTimes(1);
+    expect(askJev.mock.calls[0]![0].state).toContain("Faktura jest błędna");
+    expect(budget.snapshot().requests).toBe(1);
+  });
+
+  it("rejects invalid input with 400 and a Polish message, without calling Jev", async () => {
+    const { app, askJev } = setup();
+    await withServer(app, async (base) => {
+      const missing = await post(base, "/api/recipes/demo", {});
+      expect(missing.status).toBe(400);
+      expect(await errorOf(missing)).toBe("Wpisz treść wiadomości.");
+
+      const tooLong = await post(base, "/api/recipes/demo", { text: "a".repeat(2001) });
+      expect(tooLong.status).toBe(400);
+      expect(await errorOf(tooLong)).toMatch(/2000 znaków/);
+
+      const badJson = await post(base, "/api/recipes/demo", "{text:");
+      expect(badJson.status).toBe(400);
+      expect(await errorOf(badJson)).toMatch(/JSON/);
+
+      const huge = await post(base, "/api/recipes/demo", { text: "a".repeat(30_000) });
+      expect(huge.status).toBe(413);
+    });
+    expect(askJev).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 for an unknown recipe", async () => {
+    const { app } = setup();
+    await withServer(app, async (base) => {
+      const response = await post(base, "/api/recipes/nope", { text: "x" });
+      expect(response.status).toBe(404);
+      expect(await errorOf(response)).toMatch(/Nie ma przepisu/);
+    });
+  });
+
+  it("returns 402 once the daily budget is used up", async () => {
+    const budget = new DailyBudget(0.00001);
+    budget.record({ input_tokens: 1, output_tokens: 1, cost: 0.00002 });
+    const { app, askJev } = setup({ budget });
+    await withServer(app, async (base) => {
+      const response = await post(base, "/api/recipes/demo", { text: "Dzień dobry" });
+      expect(response.status).toBe(402);
+      expect(await errorOf(response)).toMatch(/Dzienny limit/);
+    });
+    expect(askJev).not.toHaveBeenCalled();
+  });
+
+  it("maps Jev errors to 502 and other errors to 500", async () => {
+    const failing = vi.fn<AskJev>().mockRejectedValue(new JevError("OpenRouter odrzucił klucz API (401).", 401));
+    await withServer(setup({ askJev: failing }).app, async (base) => {
+      const response = await post(base, "/api/recipes/demo", { text: "Dzień dobry" });
+      expect(response.status).toBe(502);
+      expect(await errorOf(response)).toMatch(/odrzucił klucz/);
+    });
+
+    const broken = vi.fn<AskJev>().mockRejectedValue(new Error("boom"));
+    await withServer(setup({ askJev: broken }).app, async (base) => {
+      const response = await post(base, "/api/recipes/demo", { text: "Dzień dobry" });
+      expect(response.status).toBe(500);
+      expect(await errorOf(response)).not.toMatch(/boom/);
+    });
+  });
+
+  it("limits requests per IP with 429", async () => {
+    const { app } = setup({ rateLimitPerMinute: 2 });
+    await withServer(app, async (base) => {
+      expect((await post(base, "/api/recipes/demo", { text: "1" })).status).toBe(200);
+      expect((await post(base, "/api/recipes/demo", { text: "2" })).status).toBe(200);
+      const limited = await post(base, "/api/recipes/demo", { text: "3" });
+      expect(limited.status).toBe(429);
+      expect(await errorOf(limited)).toMatch(/Za dużo zapytań/);
+      expect((await fetch(`${base}/api/health`)).status).toBe(200);
+    });
+  });
+});
+
+describe("other endpoints", () => {
+  it("serves health, stats and a JSON 404 for unknown API paths", async () => {
+    const { app } = setup();
+    await withServer(app, async (base) => {
+      expect(await (await fetch(`${base}/api/health`)).json()).toEqual({ ok: true, model: "jev-1.13" });
+      expect(await (await fetch(`${base}/api/stats`)).json()).toMatchObject({ requests: 0, spentUsd: 0, limitUsd: 1 });
+      const missing = await fetch(`${base}/api/nothing`);
+      expect(missing.status).toBe(404);
+      expect(await errorOf(missing)).toMatch(/Nie ma takiego adresu/);
+    });
+  });
+
+  it("serves the built frontend with an SPA fallback", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "jev-starter-dist-"));
+    writeFileSync(join(dir, "index.html"), "<!doctype html><title>app</title>");
+    const { app } = setup({ staticDir: dir });
+    await withServer(app, async (base) => {
+      expect(await (await fetch(`${base}/`)).text()).toContain("<title>app</title>");
+      expect(await (await fetch(`${base}/some/page`)).text()).toContain("<title>app</title>");
+      expect((await fetch(`${base}/missing.js`)).status).toBe(404);
+    });
+  });
+});
