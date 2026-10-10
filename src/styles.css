@@ -297,7 +297,8 @@ textarea:focus {
 
 .cost-badge {
   display: inline-flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 4px 10px;
   align-items: center;
   padding: 8px 16px;
   font-size: 0.85rem;
@@ -307,6 +308,10 @@ textarea:focus {
   border: 1px solid var(--line);
   border-radius: 12px;
   box-shadow: var(--shadow);
+}
+
+.cost-badge > span {
+  white-space: nowrap;
 }
 
 .cost-badge__dot {
