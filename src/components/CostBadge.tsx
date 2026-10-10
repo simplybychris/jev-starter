@@ -13,9 +13,9 @@ interface CostBadgeProps {
 }
 
 /** Shows time and cost of a Jev call. Put it next to every result that comes from Jev. */
-export function CostBadge({ ms, cost, calls = 1, estimated = false, label = "Na żywo" }: CostBadgeProps) {
+export function CostBadge({ ms, cost, calls = 1, estimated = false, label = "Live" }: CostBadgeProps) {
   return (
-    <div className="cost-badge" title="Czas odpowiedzi Jev i koszt zapytania z OpenRoutera">
+    <div className="cost-badge" title="Jev response time and request cost reported by OpenRouter">
       <span className="cost-badge__dot" aria-hidden="true" />
       <span>{label}</span>
       {calls > 1 && (
@@ -27,7 +27,7 @@ export function CostBadge({ ms, cost, calls = 1, estimated = false, label = "Na 
       <span className="cost-badge__sep" aria-hidden="true">·</span>
       <span>{formatMs(ms)}</span>
       <span className="cost-badge__sep" aria-hidden="true">·</span>
-      <span title={estimated ? "Koszt szacowany z liczby tokenów" : undefined}>
+      <span title={estimated ? "Estimated from the token count" : undefined}>
         {estimated ? "≈ " : ""}
         {formatUsd(cost)}
       </span>

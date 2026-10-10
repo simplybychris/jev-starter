@@ -16,33 +16,33 @@ interface DemoResult {
 const MAX_LENGTH = 2000;
 
 const TOPIC_LABELS: Record<Topic, string> = {
-  offer: "Zapytanie ofertowe",
-  complaint: "Reklamacja",
-  question: "Pytanie",
+  offer: "Quote request",
+  complaint: "Complaint",
+  question: "Question",
   spam: "Spam",
-  other: "Inne",
+  other: "Other",
 };
 
 const URGENCY_LABELS: Record<number, string> = {
-  1: "Może poczekać kilka tygodni",
-  2: "W ciągu dwóch tygodni",
-  3: "W tym tygodniu",
-  4: "W ciągu 1–2 dni",
-  5: "Trzeba działać dziś",
+  1: "Can wait a few weeks",
+  2: "Within two weeks",
+  3: "This week",
+  4: "Within 1–2 days",
+  5: "Needs action today",
 };
 
 const EXAMPLES = [
   {
-    label: "Reklamacja",
-    text: "Dzień dobry, trzeci raz piszę w sprawie faktury za wrzesień. Nadal nie dostałem korekty, a jutro muszę rozliczyć VAT. Proszę o pilny kontakt, bo powoli tracę cierpliwość.",
+    label: "Complaint",
+    text: "Hello, this is the third time I am writing about the September invoice. I still have not received the corrected one and I have to file my VAT return tomorrow. Please get back to me urgently, I am running out of patience.",
   },
   {
-    label: "Zapytanie",
-    text: "Cześć! Prowadzę małą piekarnię i szukam kogoś, kto zrobi nam prostą stronę z menu i zamówieniami. Ile by to kosztowało? Nie pali się, myślimy o starcie wiosną.",
+    label: "Quote request",
+    text: "Hi! I run a small bakery and I am looking for someone to build us a simple website with our menu and online orders. How much would that cost? No rush, we are thinking about launching in spring.",
   },
   {
     label: "Spam",
-    text: "GRATULACJE!!! Twój adres e-mail wygrał nowy smartfon. Kliknij link w ciągu 24 godzin i podaj dane karty, aby odebrać nagrodę.",
+    text: "CONGRATULATIONS!!! Your email address has won a brand new smartphone. Click the link within 24 hours and enter your card details to claim your prize.",
   },
 ];
 
@@ -59,7 +59,7 @@ export default function App() {
     try {
       setResponse(await callRecipe<{ text: string }, DemoResult>("demo", { text }));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Coś poszło nie tak.");
+      setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
       setLoading(false);
     }
@@ -83,15 +83,15 @@ export default function App() {
     <div className="page">
       <header>
         <p className="kicker">Jev Starter · demo</p>
-        <h1>O co chodzi w tej wiadomości?</h1>
+        <h1>What is this message about?</h1>
         <p className="lead">
-          Jedno zapytanie do Jev zwraca trzy rodzaje odpowiedzi: wybór z listy, ocenę na skali i szansę na „tak”.
+          One Jev request returns three kinds of answers: a choice from a list, a score on a scale and the probability of “yes”.
         </p>
       </header>
 
       <form className="panel" onSubmit={onSubmit}>
         <label className="label" htmlFor="message">
-          Wiadomość od klienta
+          Message from a client
         </label>
         <textarea
           id="message"
@@ -100,15 +100,15 @@ export default function App() {
           rows={3}
           onChange={(event) => setText(event.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Wklej tutaj wiadomość od klienta…"
+          placeholder="Paste a message from a client…"
         />
         <div className="actions">
           <button type="submit" className="button" disabled={loading || !text.trim()}>
-            {loading ? "Sprawdzam…" : "Sprawdź"}
+            {loading ? "Checking…" : "Check"}
           </button>
-          <span className="hint">albo Ctrl / ⌘ + Enter</span>
+          <span className="hint">or Ctrl / ⌘ + Enter</span>
           <div className="examples">
-            <span>Przykłady:</span>
+            <span>Examples:</span>
             {EXAMPLES.map((example) => (
               <button key={example.label} type="button" className="chip" onClick={() => setText(example.text)}>
                 {example.label}
@@ -128,7 +128,7 @@ export default function App() {
       )}
 
       <div className="results-head">
-        <h2>Odpowiedź Jev</h2>
+        <h2>Jev’s answer</h2>
         {response && (
           <CostBadge
             ms={response.ms}
@@ -142,20 +142,20 @@ export default function App() {
       <section className={`cards${loading ? " is-loading" : ""}`} aria-live="polite">
         <ResultCard
           type="choice"
-          title="Wybór"
-          description="Jev wybiera jedną odpowiedź z listy, którą mu podajesz."
-          question="Czego dotyczy wiadomość?"
+          title="Choice"
+          description="Jev picks one answer from the list you give it."
+          question="What is the message about?"
         >
           <p className="card-value">{result ? TOPIC_LABELS[result.topic] : "—"}</p>
           <Meter value={result?.topicConfidence ?? 0} />
-          <p className="card-sub">pewność {result ? formatPercent(result.topicConfidence) : "—"}</p>
+          <p className="card-sub">confidence {result ? formatPercent(result.topicConfidence) : "—"}</p>
         </ResultCard>
 
         <ResultCard
           type="score"
-          title="Skala"
-          description="Jev ocenia na skali, od najniższego do najwyższego poziomu."
-          question="Jak pilna jest sprawa?"
+          title="Score"
+          description="Jev rates on a scale, from the lowest to the highest level."
+          question="How urgent is it?"
         >
           <p className="card-value">{result ? `${result.urgency} / 5` : "—"}</p>
           <div className="scale" aria-hidden="true">
@@ -168,19 +168,19 @@ export default function App() {
 
         <ResultCard
           type="noul"
-          title="Tak / nie"
-          description="Jev podaje prawdopodobieństwo, że odpowiedź brzmi „tak”."
-          question="Czy nadawca jest zirytowany?"
+          title="Yes / no"
+          description="Jev gives the probability that the answer is “yes”."
+          question="Is the sender annoyed?"
         >
-          <p className="card-value">{result ? (result.annoyed ? "Tak" : "Nie") : "—"}</p>
+          <p className="card-value">{result ? (result.annoyed ? "Yes" : "No") : "—"}</p>
           <Meter value={result?.annoyedP ?? 0} />
-          <p className="card-sub">szansa na „tak”: {result ? formatPercent(result.annoyedP) : "—"}</p>
+          <p className="card-sub">probability of “yes”: {result ? formatPercent(result.annoyedP) : "—"}</p>
         </ResultCard>
       </section>
 
       <footer className="footer">
-        Klucz OpenRouter zostaje na serwerze. Przeglądarka wysyła tylko treść wiadomości, a pytania do Jev są zapisane w
-        przepisie <code>server/recipes/demo.ts</code>.
+        The OpenRouter key stays on the server. The browser only sends the message; the questions for Jev live in the
+        recipe <code>server/recipes/demo.ts</code>.
       </footer>
     </div>
   );
