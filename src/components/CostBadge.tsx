@@ -1,17 +1,4 @@
-const usdFormat = new Intl.NumberFormat("pl-PL", {
-  minimumSignificantDigits: 2,
-  maximumSignificantDigits: 2,
-});
-
-/** 0.00002016 -> "0,000020 $" */
-export function formatUsd(cost: number): string {
-  return `${cost === 0 ? "0" : usdFormat.format(cost)} $`;
-}
-
-/** 312.4 -> "312 ms" */
-export function formatMs(ms: number): string {
-  return `${Math.round(ms)} ms`;
-}
+import { formatMs, formatUsd } from "../lib/format";
 
 interface CostBadgeProps {
   /** Time of the Jev call in milliseconds. */

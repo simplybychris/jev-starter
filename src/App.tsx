@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { CostBadge } from "./components/CostBadge";
 import { callRecipe, type RecipeResponse } from "./lib/api";
+import { formatPercent } from "./lib/format";
 
 // Mirrors DemoResult in server/recipes/demo.ts.
 type Topic = "offer" | "complaint" | "question" | "spam" | "other";
@@ -44,8 +45,6 @@ const EXAMPLES = [
     text: "GRATULACJE!!! Twój adres e-mail wygrał nowy smartfon. Kliknij link w ciągu 24 godzin i podaj dane karty, aby odebrać nagrodę.",
   },
 ];
-
-const percent = (p: number) => `${Math.round(p * 100)}%`;
 
 export default function App() {
   const [text, setText] = useState(EXAMPLES[0]!.text);
@@ -142,7 +141,7 @@ export default function App() {
         >
           <p className="card-value">{result ? TOPIC_LABELS[result.topic] : "—"}</p>
           <Meter value={result?.topicConfidence ?? 0} />
-          <p className="card-sub">pewność {result ? percent(result.topicConfidence) : "—"}</p>
+          <p className="card-sub">pewność {result ? formatPercent(result.topicConfidence) : "—"}</p>
         </ResultCard>
 
         <ResultCard
@@ -168,7 +167,7 @@ export default function App() {
         >
           <p className="card-value">{result ? (result.annoyed ? "Tak" : "Nie") : "—"}</p>
           <Meter value={result?.annoyedP ?? 0} />
-          <p className="card-sub">szansa na „tak”: {result ? percent(result.annoyedP) : "—"}</p>
+          <p className="card-sub">szansa na „tak”: {result ? formatPercent(result.annoyedP) : "—"}</p>
         </ResultCard>
       </section>
 
@@ -197,7 +196,7 @@ function ResultCard(props: { type: string; title: string; description: string; q
 function Meter({ value }: { value: number }) {
   return (
     <div className="meter" aria-hidden="true">
-      <span style={{ width: percent(Math.min(1, Math.max(0, value))) }} />
+      <span style={{ width: formatPercent(Math.min(1, Math.max(0, value))) }} />
     </div>
   );
 }
