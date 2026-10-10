@@ -6,6 +6,8 @@ Jev nie pisze tekstów, tylko odpowiada na pytania o tekst: wybiera opcję z lis
 Starter powstał do odcinka na kanale Detechtive: https://www.youtube.com/@detechtiveinfo
 Pełny opis (po angielsku) jest w [README.md](README.md).
 
+![Demo startera: jedno zapytanie do Jev zwraca wybór z listy, ocenę na skali i odpowiedź tak/nie, razem z czasem i kosztem](docs/demo.jpg)
+
 ## Start w 3 krokach
 
 **1. Klucz.** Utwórz klucz na https://openrouter.ai/settings/keys i od razu ustaw na nim limit kredytów (np. 5 USD). Potem skopiuj plik z ustawieniami:

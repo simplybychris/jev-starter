@@ -6,6 +6,8 @@ Describe what you need in a few sentences, let Claude Code or Codex build it on 
 Built for a video on the Detechtive YouTube channel (Polish): https://www.youtube.com/@detechtiveinfo
 Po polsku: [README.pl.md](README.pl.md)
 
+![Jev Starter demo: one Jev request answers a Choice, a Score and a yes/no question about a client message, with time and cost shown](docs/demo.jpg)
+
 ## What Jev is
 
 Jev is TypeSafe's decision model. It does not write text; it answers questions about text: **Choice** picks one option from your list, **Score** rates on a scale you define, and **Noul** gives the probability of “yes”.
