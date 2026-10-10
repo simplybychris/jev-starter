@@ -129,7 +129,14 @@ export default function App() {
 
       <div className="results-head">
         <h2>Odpowiedź Jev</h2>
-        {response && <CostBadge ms={response.ms} cost={response.cost} />}
+        {response && (
+          <CostBadge
+            ms={response.ms}
+            cost={response.cost}
+            calls={response.calls}
+            estimated={response.costEstimated}
+          />
+        )}
       </div>
 
       <section className={`cards${loading ? " is-loading" : ""}`} aria-live="polite">

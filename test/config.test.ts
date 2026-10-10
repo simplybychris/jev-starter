@@ -27,6 +27,7 @@ describe("loadConfig", () => {
       port: 3000,
       dailyBudgetUsd: 1,
       rateLimitPerMinute: 60,
+      bodyLimit: "100kb",
     });
   });
 
@@ -56,5 +57,9 @@ describe("loadConfig", () => {
     expect(() => loadConfig({ env: { OPENROUTER_API_KEY: "k", PORT: "abc" }, envFile: null })).toThrow(
       /PORT/,
     );
+    expect(() => loadConfig({ env: { OPENROUTER_API_KEY: "k", BODY_LIMIT: "lots" }, envFile: null })).toThrow(
+      /BODY_LIMIT/,
+    );
+    expect(loadConfig({ env: { OPENROUTER_API_KEY: "k", BODY_LIMIT: "2MB" }, envFile: null }).bodyLimit).toBe("2mb");
   });
 });

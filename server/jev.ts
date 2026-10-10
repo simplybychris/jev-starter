@@ -84,6 +84,8 @@ export interface JevUsage {
   output_tokens: number;
   /** Real cost in USD reported by OpenRouter. */
   cost: number;
+  /** True when OpenRouter did not report the cost and it was estimated from input tokens. */
+  costEstimated?: boolean;
 }
 
 export interface JevRequest {
@@ -261,4 +263,40 @@ export function createAskJev(options: JevClientOptions): AskJev {
       model: typeof data.model === "string" ? data.model : model,
     };
   };
+}
+
+// ---------- Many requests ----------
+
+/** Jev allows about 1200 requests per minute; bulk runs should keep at most 8 in flight. */
+export const MAX_PARALLEL_REQUESTS = 8;
+
+/**
+ * Sends several Jev requests with at most `concurrency` in flight (default and maximum: 8).
+ * Results keep the order of `requests`. The first error stops new requests and is rethrown.
+ */
+export async function askMany(
+  ask: AskJev,
+  requests: JevRequest[],
+  options: { concurrency?: number } = {},
+): Promise<JevResult[]> {
+  const wanted = Math.floor(options.concurrency ?? MAX_PARALLEL_REQUESTS);
+  const concurrency = Math.max(1, Math.min(MAX_PARALLEL_REQUESTS, wanted));
+  const results: JevResult[] = new Array(requests.length);
+  let next = 0;
+  let failed = false;
+
+  async function worker(): Promise<void> {
+    while (!failed && next < requests.length) {
+      const index = next++;
+      try {
+        results[index] = await ask(requests[index]!);
+      } catch (error) {
+        failed = true;
+        throw error;
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(concurrency, requests.length) }, () => worker()));
+  return results;
 }

@@ -27,6 +27,7 @@ const app = createApp({
   recipes,
   model: config.jevModel,
   rateLimitPerMinute: config.rateLimitPerMinute,
+  bodyLimit: config.bodyLimit,
   staticDir: devMode ? null : join(PROJECT_ROOT, "dist"),
 });
 

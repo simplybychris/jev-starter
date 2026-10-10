@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMs, formatPercent, formatUsd } from "../src/lib/format.js";
+import { formatMs, formatPercent, formatRequests, formatUsd } from "../src/lib/format.js";
 
 describe("CostBadge formatting", () => {
   it("formats USD with two significant digits and a Polish decimal comma", () => {
@@ -11,5 +11,15 @@ describe("CostBadge formatting", () => {
   it("formats milliseconds and percentages", () => {
     expect(formatMs(312.4)).toBe("312\u00a0ms");
     expect(formatPercent(0.964)).toBe("96%");
+  });
+});
+
+describe("request count", () => {
+  it("uses Polish plural forms", () => {
+    expect(formatRequests(1)).toBe("1 zapytanie");
+    expect(formatRequests(3)).toBe("3 zapytania");
+    expect(formatRequests(5)).toBe("5 zapytań");
+    expect(formatRequests(12)).toBe("12 zapytań");
+    expect(formatRequests(22)).toBe("22 zapytania");
   });
 });

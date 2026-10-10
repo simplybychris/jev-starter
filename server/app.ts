@@ -13,14 +13,16 @@ export interface AppOptions {
   recipes: RecipeRegistry;
   model: string;
   rateLimitPerMinute: number;
+  /** Max JSON body size accepted by /api, e.g. "100kb". */
+  bodyLimit: string;
   /** Folder with the built frontend (dist/). null = API only (dev mode, tests). */
   staticDir: string | null;
 }
 
-const handleApiErrors: ErrorRequestHandler = (error, _req, res, _next) => {
+const apiErrorHandler = (bodyLimit: string): ErrorRequestHandler => (error, _req, res, _next) => {
   const type = (error as { type?: string }).type;
   if (type === "entity.too.large") {
-    res.status(413).json({ error: "Za dużo danych w zapytaniu (limit to 20 kB)." });
+    res.status(413).json({ error: `Za dużo danych w zapytaniu (limit to ${bodyLimit}).` });
     return;
   }
   if (type === "entity.parse.failed") {
@@ -50,7 +52,7 @@ export function createApp(options: AppOptions): Express {
       },
     }),
   );
-  api.use(express.json({ limit: "20kb" }));
+  api.use(express.json({ limit: options.bodyLimit }));
 
   api.get("/health", (_req, res) => {
     res.json({ ok: true, model: options.model });
@@ -62,7 +64,7 @@ export function createApp(options: AppOptions): Express {
   api.use((_req, res) => {
     res.status(404).json({ error: "Nie ma takiego adresu API." });
   });
-  api.use(handleApiErrors);
+  api.use(apiErrorHandler(options.bodyLimit));
 
   app.use("/api", api);
 

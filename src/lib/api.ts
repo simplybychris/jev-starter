@@ -1,10 +1,14 @@
 /** What every recipe endpoint returns. */
 export interface RecipeResponse<TResult> {
   result: TResult;
-  /** Time of the Jev call in milliseconds, measured on the server. */
+  /** Time spent waiting for Jev in milliseconds, measured on the server. */
   ms: number;
-  /** Real cost of the Jev call in USD. */
+  /** Cost of all Jev requests behind this result in USD. */
   cost: number;
+  /** True when the cost was estimated from tokens (OpenRouter did not report it). */
+  costEstimated: boolean;
+  /** Number of Jev requests behind this result. */
+  calls: number;
 }
 
 export class ApiError extends Error {
@@ -52,5 +56,11 @@ export async function callRecipe<TInput, TResult>(
   if (!body || body.result === undefined) {
     throw new ApiError("Serwer zwrócił nieoczekiwaną odpowiedź.", response.status);
   }
-  return { result: body.result, ms: body.ms ?? 0, cost: body.cost ?? 0 };
+  return {
+    result: body.result,
+    ms: body.ms ?? 0,
+    cost: body.cost ?? 0,
+    costEstimated: body.costEstimated ?? false,
+    calls: body.calls ?? 1,
+  };
 }

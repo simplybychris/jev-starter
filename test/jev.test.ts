@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   JEV_URL,
   JevError,
+  askMany,
   choice,
   createAskJev,
   noul,
@@ -9,7 +10,9 @@ import {
   readNoul,
   readScore,
   score,
+  type AskJev,
   type JevAnswers,
+  type JevResult,
 } from "../server/jev.js";
 
 const API_KEY = "sk-or-v1-test-secret-123";
@@ -148,5 +151,51 @@ describe("answer readers", () => {
   it("throw a JevError when the answer is missing or has another type", () => {
     expect(() => readScore(answers, "department")).toThrow(JevError);
     expect(() => readChoice(answers, "missing")).toThrow(/missing/);
+  });
+});
+
+describe("askMany", () => {
+  const result = (n: number): JevResult => ({
+    model: "m",
+    ms: 1,
+    usage: { input_tokens: n, output_tokens: 0, cost: 0 },
+    answers: {},
+  });
+
+  it("keeps the order and never runs more than `concurrency` requests at once", async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const ask: AskJev = async (request) => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      const n = Number(request.state);
+      await new Promise((resolve) => setTimeout(resolve, 10 - n));
+      inFlight -= 1;
+      return result(n);
+    };
+    const requests = Array.from({ length: 7 }, (_, i) => ({ state: String(i), questions }));
+
+    const results = await askMany(ask, requests, { concurrency: 3 });
+    expect(results.map((r) => r.usage.input_tokens)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect(maxInFlight).toBe(3);
+  });
+
+  it("caps concurrency at 8 and stops starting new requests after an error", async () => {
+    let started = 0;
+    let maxInFlight = 0;
+    let inFlight = 0;
+    const ask: AskJev = async (request) => {
+      started += 1;
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      inFlight -= 1;
+      if (request.state === "2") throw new JevError("boom", 502);
+      return result(0);
+    };
+    const many = Array.from({ length: 30 }, (_, i) => ({ state: String(i), questions }));
+    await expect(askMany(ask, many, { concurrency: 50 })).rejects.toThrow("boom");
+    expect(maxInFlight).toBe(8);
+    expect(started).toBeLessThan(30);
   });
 });

@@ -11,6 +11,11 @@ export interface BudgetSnapshot {
   remainingUsd: number;
 }
 
+/** Thrown before a Jev call when the daily budget is used up (the route answers 402). */
+export class BudgetExceededError extends Error {
+  override name = "BudgetExceededError";
+}
+
 function dayKey(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;

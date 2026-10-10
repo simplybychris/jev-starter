@@ -14,6 +14,8 @@ export interface Config {
   port: number;
   dailyBudgetUsd: number;
   rateLimitPerMinute: number;
+  /** Max JSON body size, e.g. "100kb". */
+  bodyLimit: string;
 }
 
 export class ConfigError extends Error {
@@ -31,6 +33,7 @@ const HINTS: Record<string, string> = {
   PORT: "podaj numer portu, np. 3000",
   DAILY_BUDGET_USD: "podaj kwotę w USD większą od zera, np. 1",
   RATE_LIMIT_PER_MINUTE: "podaj liczbę całkowitą większą od zera, np. 60",
+  BODY_LIMIT: "podaj rozmiar w kb albo mb, np. 100kb",
 };
 
 const schema = z.object({
@@ -39,6 +42,10 @@ const schema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   DAILY_BUDGET_USD: z.coerce.number().positive().default(1),
   RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(60),
+  BODY_LIMIT: z
+    .string()
+    .regex(/^\d+(kb|mb)$/i)
+    .default("100kb"),
 });
 
 type EnvSource = Record<string, string | undefined>;
@@ -79,5 +86,6 @@ export function loadConfig(options: { env?: EnvSource; envFile?: string | null }
     port: data.PORT,
     dailyBudgetUsd: data.DAILY_BUDGET_USD,
     rateLimitPerMinute: data.RATE_LIMIT_PER_MINUTE,
+    bodyLimit: data.BODY_LIMIT.toLowerCase(),
   };
 }

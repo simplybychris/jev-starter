@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
-import type { DailyBudget } from "./budget.js";
+import { BudgetExceededError, type DailyBudget } from "./budget.js";
+import { createRecipeContext } from "./context.js";
 import { JevError, type AskJev } from "./jev.js";
 import type { RecipeRegistry } from "./recipes/recipe.js";
 
@@ -21,7 +22,7 @@ function formatIssues(error: z.ZodError) {
 
 /**
  * POST /recipes/:name with the recipe input as JSON body.
- * Flow: validate -> budget check -> Jev -> interpret -> { result, ms, cost }.
+ * Flow: validate -> Jev through the budgeted context -> interpret -> { result, ms, cost, costEstimated, calls }.
  */
 export function createRecipeRouter({ recipes, askJev, budget }: RecipeRouterDeps): Router {
   const router = Router();
@@ -40,18 +41,21 @@ export function createRecipeRouter({ recipes, askJev, budget }: RecipeRouterDeps
       return;
     }
 
-    if (budget.isExceeded()) {
-      res.status(402).json({ error: budget.exceededMessage() });
-      return;
-    }
-
+    const { context, summary } = createRecipeContext(askJev, budget);
     try {
-      const { state, questions } = recipe.build(parsed.data);
-      const jev = await askJev({ state, questions });
-      budget.record(jev.usage);
-      const result = recipe.interpret(jev.answers, parsed.data);
-      res.json({ result, ms: jev.ms, cost: jev.usage.cost });
+      let result: unknown;
+      if (recipe.run) {
+        result = await recipe.run(parsed.data, context);
+      } else {
+        const jev = await context.ask(recipe.build(parsed.data));
+        result = recipe.interpret(jev.answers, parsed.data);
+      }
+      res.json({ result, ...summary() });
     } catch (error) {
+      if (error instanceof BudgetExceededError) {
+        res.status(402).json({ error: error.message });
+        return;
+      }
       if (error instanceof JevError) {
         console.warn(`[jev] ${name}: ${error.status} ${error.message}`);
         res.status(502).json({ error: error.message });

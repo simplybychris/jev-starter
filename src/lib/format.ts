@@ -17,3 +17,12 @@ export function formatMs(ms: number): string {
 export function formatPercent(p: number): string {
   return `${Math.round(p * 100)}%`;
 }
+
+/** 1 -> "1 zapytanie", 3 -> "3 zapytania", 5 -> "5 zapytań" */
+export function formatRequests(count: number): string {
+  const lastDigit = count % 10;
+  const lastTwo = count % 100;
+  if (count === 1) return "1 zapytanie";
+  if (lastDigit >= 2 && lastDigit <= 4 && (lastTwo < 12 || lastTwo > 14)) return `${count} zapytania`;
+  return `${count} zapytań`;
+}

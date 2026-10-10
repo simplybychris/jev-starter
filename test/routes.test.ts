@@ -20,7 +20,20 @@ const check = defineRecipe({
   build: ({ text }) => ({ state: text, questions: { polite: noul("Is the message polite?") } }),
   interpret: (answers) => ({ polite: readNoul(answers, "polite").noul >= 0.5 }),
 });
-const recipes = registerRecipes([check]);
+// A multi-call recipe: one Jev request per item, one at a time, through the budgeted context.
+const batch = defineRecipe({
+  name: "batch",
+  input: z.object({ items: z.array(z.string().max(100)).min(1).max(10) }),
+  run: async ({ items }, ctx) => {
+    const results = await ctx.askMany(
+      items.map((item) => ({ state: { item }, questions: { polite: noul("Is the item polite?") } })),
+      { concurrency: 1 },
+    );
+    return { polite: results.map((r) => readNoul(r.answers, "polite").noul >= 0.5) };
+  },
+});
+
+const recipes = registerRecipes([check, batch]);
 
 const JEV_RESULT: JevResult = {
   model: "typesafe/jev-1.13-20260917",
@@ -38,6 +51,7 @@ function setup(overrides: Partial<AppOptions> = {}) {
     recipes,
     model: "jev-1.13",
     rateLimitPerMinute: 100,
+    bodyLimit: "1kb",
     staticDir: null,
     ...overrides,
   });
@@ -80,7 +94,13 @@ describe("POST /api/recipes/:name", () => {
     await withServer(app, async (base) => {
       const response = await post(base, "/api/recipes/check", { text: "  Dzień dobry!  " });
       expect(response.status).toBe(200);
-      expect(await response.json()).toEqual({ result: { polite: true }, ms: 312, cost: 0.000021 });
+      expect(await response.json()).toEqual({
+        result: { polite: true },
+        ms: 312,
+        cost: 0.000021,
+        costEstimated: false,
+        calls: 1,
+      });
     });
     expect(askJev).toHaveBeenCalledTimes(1);
     expect(askJev.mock.calls[0]![0].state).toBe("Dzień dobry!");
@@ -109,8 +129,9 @@ describe("POST /api/recipes/:name", () => {
       expect(badJson.status).toBe(400);
       expect(await errorOf(badJson)).toMatch(/JSON/);
 
-      const huge = await post(base, "/api/recipes/check", { text: "a".repeat(30_000) });
+      const huge = await post(base, "/api/recipes/check", { text: "a".repeat(2000) });
       expect(huge.status).toBe(413);
+      expect(await errorOf(huge)).toMatch(/1kb/);
     });
     expect(askJev).not.toHaveBeenCalled();
   });
@@ -162,6 +183,38 @@ describe("POST /api/recipes/:name", () => {
       expect(await errorOf(limited)).toMatch(/Za dużo zapytań/);
       expect((await fetch(`${base}/api/health`)).status).toBe(200);
     });
+  });
+});
+
+describe("multi-call recipes (run + ctx.askMany)", () => {
+  it("sums cost and calls, records every call in the budget", async () => {
+    const { app, askJev, budget } = setup();
+    await withServer(app, async (base) => {
+      const response = await post(base, "/api/recipes/batch", { items: ["a", "b", "c"] });
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as { result: unknown; cost: number; calls: number; ms: number };
+      expect(body.result).toEqual({ polite: [true, true, true] });
+      expect(body.calls).toBe(3);
+      expect(body.cost).toBeCloseTo(0.000063, 10);
+      expect(body.ms).toBeGreaterThanOrEqual(0);
+    });
+    expect(askJev).toHaveBeenCalledTimes(3);
+    expect(askJev.mock.calls[1]![0].state).toEqual({ item: "b" });
+    expect(budget.snapshot().requests).toBe(3);
+  });
+
+  it("stops with 402 when the budget runs out in the middle", async () => {
+    const budget = new DailyBudget(0.00002);
+    const { app, askJev } = setup({ budget });
+    await withServer(app, async (base) => {
+      const response = await post(base, "/api/recipes/batch", { items: ["a", "b", "c"] });
+      expect(response.status).toBe(402);
+    });
+    expect(askJev).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects recipes without build/interpret or run", () => {
+    expect(() => registerRecipes([{ name: "broken", input: z.object({}) } as never])).toThrow(/build\(\)/);
   });
 });
 
