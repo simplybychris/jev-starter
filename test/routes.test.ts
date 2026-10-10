@@ -162,6 +162,7 @@ describe("other endpoints", () => {
       const missing = await fetch(`${base}/api/nothing`);
       expect(missing.status).toBe(404);
       expect(await errorOf(missing)).toMatch(/Nie ma takiego adresu/);
+      expect(await (await fetch(`${base}/`)).text()).toMatch(/serwer API/);
     });
   });
 

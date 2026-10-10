@@ -77,6 +77,13 @@ export function createApp(options: AppOptions): Express {
       }
       res.sendFile(join(staticDir, "index.html"));
     });
+  } else {
+    const hint = staticDir
+      ? "Brak zbudowanej strony w folderze dist/. Uruchom najpierw npm run build."
+      : "To jest serwer API. Stronę otwórz pod adresem z Vite (zwykle http://localhost:5173).";
+    app.get("/", (_req, res) => {
+      res.type("text/plain; charset=utf-8").send(hint);
+    });
   }
 
   return app;
