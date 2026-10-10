@@ -186,12 +186,28 @@ describe("POST /api/recipes/:name", () => {
   });
 
   it("maps other errors to 500 without details", async () => {
-
     const broken = vi.fn<AskJev>().mockRejectedValue(new Error("boom"));
     await withServer(setup({ askJev: broken }).app, async (base) => {
       const response = await post(base, "/api/recipes/check", { text: "Dzień dobry" });
       expect(response.status).toBe(500);
       expect(await errorOf(response)).not.toMatch(/boom/);
+    });
+  });
+
+  it("behind Caddy, limits per client IP from X-Forwarded-For (only the last hop is trusted)", async () => {
+    const { app } = setup({ rateLimitPerMinute: 1 });
+    const from = (base: string, forwardedFor: string) =>
+      fetch(`${base}/api/recipes/check`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-forwarded-for": forwardedFor },
+        body: JSON.stringify({ text: "x" }),
+      });
+    await withServer(app, async (base) => {
+      expect((await from(base, "203.0.113.1")).status).toBe(200);
+      expect((await from(base, "203.0.113.1")).status).toBe(429);
+      // A spoofed first entry does not help: the proxy-added (last) address counts.
+      expect((await from(base, "198.51.100.7, 203.0.113.1")).status).toBe(429);
+      expect((await from(base, "203.0.113.2")).status).toBe(200);
     });
   });
 
