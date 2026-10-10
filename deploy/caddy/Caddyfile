@@ -1,0 +1,18 @@
+# Shared Caddy for every app on this VPS: one site block per app.
+# Caddy gets the HTTPS certificate on its own once the host name points to the VPS.
+# After editing reload it:
+#   cd /opt/caddy && docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile
+#
+# Example without your own domain (APP_NAME=moja-aplikacja, VPS IP 203.0.113.10):
+#
+# moja-aplikacja.203-0-113-10.sslip.io {
+# 	encode
+# 	reverse_proxy moja-aplikacja:3000
+# }
+#
+# Example with your own subdomain (A record -> VPS IP):
+#
+# app.twojadomena.pl {
+# 	encode
+# 	reverse_proxy moja-aplikacja:3000
+# }

@@ -1,0 +1,33 @@
+# Shared Caddy for every app on the VPS. Copy this folder to /opt/caddy once, then:
+#   docker network create web   (if it does not exist yet)
+#   cd /opt/caddy && docker compose up -d
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      # The whole folder is mounted, so edits to Caddyfile are always visible
+      # (a single-file mount goes stale when an editor replaces the file).
+      - ./:/etc/caddy:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - web
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  web:
+    external: true
+
+volumes:
+  caddy_data:
+  caddy_config:

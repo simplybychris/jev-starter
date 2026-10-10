@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-server
+.git
+.env
+.env.*
+!.env.example
+.superpowers
+.DS_Store
+npm-debug.log*
